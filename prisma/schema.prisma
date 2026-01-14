@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Rooms & Configuration
+model Room {
+  id        String   @id // Room Number (e.g., "101")
+  type      String   // Deluxe, Premium
+  deviceId  String?  @unique // ESP32 MAC/ID
+  status    String   @default("Vacant") // Occupied, Vacant, Cleaning
+  
+  // Relations
+  currentGuest Guest? @relation("CurrentGuest")
+  guests       Guest[] // History of guests in this room
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 2. Guests & Check-Ins
+model Guest {
+  id          String   @id @default(uuid())
+  name        String
+  rfidCardId  String?  // The card assigned to them
+  
+  // Stay Details
+  checkInTime  DateTime @default(now())
+  checkOutTime DateTime?
+  stayLength   Int      @default(1)
+  
+  // Payment
+  totalAmount  Float
+  paymentStatus String  @default("Unpaid")
+  status       String   @default("Checked In") // Checked In, Checked Out
+  
+  // Room Relation
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id])
+  
+  // Active Binding (if they are currently the active guest in the room)
+  currentRoom Room?    @relation("CurrentGuest", fields: [currentRoomId], references: [id])
+  currentRoomId String? @unique
+
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 3. Employees
+model Employee {
+  id          String   @id // EMP-001
+  name        String
+  role        String   // Receptionist, Chef...
+  rfidCardId  String?  @unique
+  phone       String
+  email       String
+  joinDate    DateTime
+  salary      Float
+  status      String   @default("Active")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 4. Access Logs (RFID/BLE Tap History)
+model AccessLog {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  deviceId  String   // Which ESP32 sent this
+  cardId    String   // What card was tapped
+  type      String   // RFID, BLE Entry, BLE Exit
+  access    Boolean  // Granted/Denied
+  message   String?
+}
+
+// 5. Transactions (Financial/Service)
+model Transaction {
+  id        String   @id @default(uuid())
+  type      String   // Room Service, Laundry, etc.
+  amount    Float
+  date      DateTime @default(now())
+  
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id])
+}
+// 6. Admin Users
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  hotelName String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

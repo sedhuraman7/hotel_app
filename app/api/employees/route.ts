@@ -1,0 +1,65 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+// GET: List all employees
+export async function GET() {
+    try {
+        const employees = await prisma.employee.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+        return NextResponse.json(employees);
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to fetch employees" }, { status: 500 });
+    }
+}
+
+// POST: Add a new employee
+export async function POST(req: NextRequest) {
+    try {
+        const body = await req.json();
+        // body: { id, name, role, phone, email, ... }
+
+        // Check ID uniqueness
+        const existing = await prisma.employee.findUnique({ where: { id: body.id } });
+        if (existing) {
+            return NextResponse.json({ error: "Employee ID already exists" }, { status: 400 });
+        }
+
+        const employee = await prisma.employee.create({
+            data: {
+                id: body.id,
+                name: body.name,
+                role: body.role,
+                rfidCardId: body.rfidCardId || null, // Optional
+                phone: body.phone,
+                email: body.email,
+                joinDate: new Date(body.joinDate),
+                salary: parseFloat(body.salary),
+                status: "Active"
+            }
+        });
+
+        return NextResponse.json(employee);
+    } catch (error) {
+        console.error("Add Employee Error:", error);
+        return NextResponse.json({ error: "Failed to create employee" }, { status: 500 });
+    }
+}
+
+// DELETE: Remove employee
+export async function DELETE(req: NextRequest) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get("id");
+
+        if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+        await prisma.employee.delete({
+            where: { id }
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+    }
+}
