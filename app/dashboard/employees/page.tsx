@@ -31,13 +31,13 @@ export default function EmployeesPage() {
     const handleAddEmployee = async (data: any) => {
         const payload = {
             id: data.employeeId,
-            name: `${data.firstName} ${data.lastName}`,
-            role: data.role,
+            name: data.employeeName,
+            role: data.employeeType,
             phone: data.phoneNumber,
             email: data.email,
             salary: data.salary,
-            joinDate: new Date().toISOString(),
-            rfidCardId: null
+            joinDate: new Date(data.joinDate || new Date()).toISOString(),
+            rfidCardId: data.rfid || null
         };
 
         const res = await fetch("/api/employees", {
