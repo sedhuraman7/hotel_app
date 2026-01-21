@@ -50,7 +50,8 @@ export default function EmployeesPage() {
             fetchEmployees();
             setIsModalOpen(false);
         } else {
-            alert("Failed to add employee. ID might be duplicate.");
+            const err = await res.json();
+            alert(`Failed: ${err.error || "Something went wrong"}`);
         }
     };
 

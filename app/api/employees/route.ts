@@ -17,7 +17,6 @@ export async function GET() {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        // body: { id, name, role, phone, email, ... }
 
         // Check ID uniqueness
         const existing = await prisma.employee.findUnique({ where: { id: body.id } });
@@ -25,24 +24,29 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Employee ID already exists" }, { status: 400 });
         }
 
+        const salary = body.salary ? parseFloat(body.salary) : 0;
+        if (isNaN(salary)) {
+            return NextResponse.json({ error: "Invalid Salary" }, { status: 400 });
+        }
+
         const employee = await prisma.employee.create({
             data: {
                 id: body.id,
                 name: body.name,
                 role: body.role,
-                rfidCardId: body.rfidCardId || null, // Optional
+                rfidCardId: body.rfidCardId || null,
                 phone: body.phone,
                 email: body.email,
                 joinDate: new Date(body.joinDate),
-                salary: parseFloat(body.salary),
+                salary: salary,
                 status: "Active"
             }
         });
 
         return NextResponse.json(employee);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Add Employee Error:", error);
-        return NextResponse.json({ error: "Failed to create employee" }, { status: 500 });
+        return NextResponse.json({ error: error.message || "Failed to create employee" }, { status: 500 });
     }
 }
 
