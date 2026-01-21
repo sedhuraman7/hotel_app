@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { email, password, hotelName } = body;
+        const { email, password, hotelName, wifiSsid, wifiPass } = body;
 
         if (!email || !password) {
             return NextResponse.json({ error: "Email and Password are required" }, { status: 400 });
@@ -27,7 +27,9 @@ export async function POST(req: NextRequest) {
                 name: "Admin", // Default name
                 email,
                 password: hashedPassword,
-                hotelName
+                hotelName,
+                wifiSsid,
+                wifiPass
             }
         });
 

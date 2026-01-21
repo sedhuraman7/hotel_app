@@ -20,7 +20,9 @@ export default function CheckInModal({ isOpen, onClose, onSubmit, initialData }:
         adults: 1,
         children: 0,
         rfid: "",
-        phone: "", // Added phone field
+        phone: "",
+        email: "",
+        aadhar: "",
 
         // Room Details
         roomNumber: "", // Room ID
@@ -135,6 +137,14 @@ export default function CheckInModal({ isOpen, onClose, onSubmit, initialData }:
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-semibold text-slate-600 uppercase">Phone</label>
                                         <input name="phone" value={formData.phone} onChange={handleChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="+91 9876543210" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Email (For Rewards)</label>
+                                        <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="guest@example.com" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Aadhar Number</label>
+                                        <input name="aadhar" value={formData.aadhar} onChange={handleChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="1234 5678 9012" />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-semibold text-slate-600 uppercase">RF ID</label>

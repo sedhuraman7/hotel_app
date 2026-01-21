@@ -48,6 +48,10 @@ model Guest {
 
   transactions Transaction[]
 
+  // Loyalty Link
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -96,7 +100,25 @@ model User {
   email     String   @unique
   password  String
   hotelName String?
+  wifiSsid  String?
+  wifiPass  String?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// 7. Customer Loyalty Profile
+model Customer {
+  id          String   @id @default(uuid())
+  name        String
+  phone       String   @unique
+  email       String?
+  points      Int      @default(0) // Loyalty Credit Points
+  visits      Int      @default(0)
+  
+  guests      Guest[] // History of stays
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

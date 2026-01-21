@@ -9,7 +9,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Luxe Hotel Management",
+  title: "NS Hotel Management",
   description: "Premium Smart Hotel Management System",
 };
 

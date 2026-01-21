@@ -24,6 +24,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [hotelName, setHotelName] = useState("");
+  const [wifiSsid, setWifiSsid] = useState("");
+  const [wifiPass, setWifiPass] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -38,7 +40,7 @@ export default function LoginPage() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, hotelName })
+        body: JSON.stringify({ email, password, hotelName, wifiSsid, wifiPass })
       });
 
       const data = await res.json();
@@ -144,20 +146,46 @@ export default function LoginPage() {
                 onSubmit={(e) => { e.preventDefault(); handleAuth(); }}
               >
                 {!isLogin && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider ml-1">Hotel Name</label>
-                    <div className="relative group">
-                      <Building2 className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                      <input
-                        type="text"
-                        placeholder="Luxury Inn"
-                        required={!isLogin}
-                        value={hotelName}
-                        onChange={(e) => setHotelName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
-                      />
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider ml-1">Hotel Name</label>
+                      <div className="relative group">
+                        <Building2 className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                          type="text"
+                          placeholder="Luxury Inn"
+                          required={!isLogin}
+                          value={hotelName}
+                          onChange={(e) => setHotelName(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                        />
+                      </div>
                     </div>
-                  </div>
+
+                    {/* WiFi Setup (Optional) */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider ml-1">WiFi Name (SSID)</label>
+                        <input
+                          type="text"
+                          placeholder="Hotel_Guest"
+                          value={wifiSsid}
+                          onChange={(e) => setWifiSsid(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider ml-1">WiFi Password</label>
+                        <input
+                          type="text"
+                          placeholder="Guest123"
+                          value={wifiPass}
+                          onChange={(e) => setWifiPass(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 <div className="space-y-1.5">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Plus, Edit, FileText, ArrowRightLeft, History } from "lucide-react";
+import { ArrowLeft, Plus, Edit, FileText, ArrowRightLeft, History, DoorClosed } from "lucide-react";
 import CheckInModal from "@/components/CheckInModal";
 import TransferModal from "@/components/TransferModal";
 import InvoiceModal from "@/components/InvoiceModal";
@@ -57,6 +57,8 @@ export default function RoomRecordsPage() {
             roomId: data.roomNumber,
             cardId: data.rfid || null,
             phone: data.phone,
+            email: data.email,
+            aadhar: data.aadhar,
             paymentStatus: data.paymentStatus,
             totalAmount: data.totalAmount
         };
@@ -76,6 +78,28 @@ export default function RoomRecordsPage() {
         }
     };
 
+    const handleCheckOut = async (guestId: string) => {
+        if (!confirm("Are you sure you want to check out this guest?")) return;
+
+        try {
+            const res = await fetch(`/api/guests/${guestId}`, { // We need to ensure this route exists or update how we route
+                // Since next.js app router usually uses dynamic routes like app/api/guests/[id]/route.ts
+                // I will verify that file exists or create it.
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "Checked Out" })
+            });
+
+            if (res.ok) {
+                fetchRecords(); // Refresh list
+            } else {
+                alert("Failed to check out guest");
+            }
+        } catch (error) {
+            console.error("Checkout error:", error);
+        }
+    };
+
     const handleEdit = (record: any) => {
         setSelectedRecord(record);
         setIsModalOpen(true);
@@ -91,9 +115,29 @@ export default function RoomRecordsPage() {
         setIsInvoiceOpen(true);
     };
 
-    const handleTransferSubmit = (newRoom: string) => {
+    const handleTransferSubmit = async (newRoom: string) => {
         if (actionRecord) {
-            setRecords(records.map(rec => rec.id === actionRecord.id ? { ...rec, roomNumber: newRoom } : rec));
+            try {
+                const res = await fetch("/api/guests/transfer", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        guestId: actionRecord.id,
+                        oldRoomId: actionRecord.roomNumber,
+                        newRoomId: newRoom
+                    })
+                });
+
+                if (res.ok) {
+                    fetchRecords(); // Refresh data
+                    setIsTransferOpen(false);
+                } else {
+                    const err = await res.json();
+                    alert(`Transfer Failed: ${err.error}`);
+                }
+            } catch (error) {
+                console.error("Transfer error:", error);
+            }
         }
     };
 
@@ -156,6 +200,15 @@ export default function RoomRecordsPage() {
                                     </td>
                                     <td className="p-4">
                                         <div className="flex items-center justify-end gap-2">
+                                            {record.status === 'Checked In' && (
+                                                <button
+                                                    onClick={() => handleCheckOut(record.id)}
+                                                    className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                                                    title="Check Out Guest"
+                                                >
+                                                    <DoorClosed className="w-4 h-4" />
+                                                </button>
+                                            )}
                                             <Link
                                                 href={`/dashboard/records/${record.id}`}
                                                 className="p-1.5 text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"

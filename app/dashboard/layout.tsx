@@ -12,9 +12,11 @@ import {
     Users,
     Bell,
     LogOut,
-    UserCircle
+    UserCircle,
+    FileSpreadsheet
 } from "lucide-react";
 import { motion } from "framer-motion";
+import React from 'react';
 
 export default function DashboardLayout({
     children,
@@ -44,6 +46,7 @@ export default function DashboardLayout({
         { name: "Restaurant", icon: Utensils, href: "/dashboard/restaurant" },
         { name: "Rooms & Assets", icon: BedDouble, href: "/dashboard/rooms" },
         { name: "Employees", icon: Users, href: "/dashboard/employees" },
+        { name: "Reports", icon: FileSpreadsheet, href: "/dashboard/admin/export" },
     ];
 
     return (
