@@ -15,8 +15,6 @@ import {
     Calendar
 } from "lucide-react";
 import Link from "next/link";
-import { db } from "@/lib/firebase"; // Firebase Config
-import { ref, get, query, orderByChild, startAt, endAt } from "firebase/database";
 
 export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: string }> }) {
     const { roomId } = use(params);
@@ -41,73 +39,24 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
         setTransactions([]);
 
         try {
-            // Fetch Logs from Firebase
-            const logsRef = ref(db, 'logs');
-            const snapshot = await get(logsRef); // Get all logs (Optimizable later)
+            // Fetch Logs from SQL API
+            const res = await fetch(`/api/logs?roomId=${roomId}&start=${dateRange.start}&end=${dateRange.end}`);
 
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                // Data format: { "TIMESTAMP": "Card: XXX | Device: YYY", ... }
+            if (res.ok) {
+                const logs = await res.json();
 
-                const formattedLogs = Object.entries(data).map(([key, value]: [string, any]) => {
-                    // Extract Details using Regex or Split
-                    // Format: "Card: 09002935E5F0 | Device: 20E7C8691180"
-                    const cardMatch = value.toString().match(/Card:?\s*([A-Z0-9]+)/i);
-                    const deviceMatch = value.toString().match(/Device:?\s*([A-Z0-9]+)/i);
-                    const typeMatch = value.toString().match(/\(([^)]+)\)/); // Extracts (Guest), (Staff), (Auto-OFF)
-
-                    const timestamp = parseInt(key);
-                    // Handle Milliseconds vs Seconds (ESP32 sends seconds sometimes if not config'd right, but we fixed to ms)
-                    // If timestamp look small (< 2020 year), multiply by 1000? No, we trust ESP32 now sends ms.
-                    const dateObj = new Date(timestamp);
-                    const dateStr = dateObj.toISOString().split('T')[0];
-
-                    // Filter by Date Range
-                    if (dateStr < dateRange.start || dateStr > dateRange.end) return null;
-
-                    // Determine Access Type / Name / Category
-                    let accessType = "Authorized";
-                    let rowType = "Entry";
-                    let category = "Other"; // Default
-
-                    const logString = value.toString();
-
-                    if (logString.includes("(Staff)")) {
-                        category = "Employee";
-                        rowType = "Entry (Staff)";
-                    } else if (logString.includes("BLE")) {
-                        category = "Employee";
-                        rowType = "BLE Entry/Exit"; // Or generic BLE
-                        if (logString.includes("OUT")) rowType = "BLE Exit";
-                    } else if (logString.includes("(Guest)")) {
-                        category = "Guest";
-                        rowType = "Entry (Guest)";
-                    } else if (logString.includes("DENIED")) {
-                        category = "Unknown";
-                        rowType = "Access Denied";
-                        accessType = "Denied";
-                    } else if (logString.includes("Removed")) {
-                        accessType = "Exit";
-                        rowType = "Card Removed";
-                        category = "Guest";
-                    } else if (logString.includes("Auto-OFF")) {
-                        accessType = "System";
-                        rowType = "Auto-Lock";
-                        category = "Employee"; // Usually housekeeping
-                    }
-
-                    return {
-                        id: key,
-                        type: rowType,
-                        category: category,
-                        name: typeMatch ? typeMatch[1] : (category === "Unknown" ? "Unknown User" : category),
-                        position: "Room Access",
-                        cardId: cardMatch ? cardMatch[1] : (value.toString().includes("BLE") ? "BLE Tag" : (cardMatch ? cardMatch[1] : "N/A")),
-                        deviceId: deviceMatch ? deviceMatch[1] : "N/A",
-                        access: accessType,
-                        time: dateObj.toLocaleString()
-                    };
-                }).filter(log => log !== null).reverse(); // Show newest first
+                // Map SQL Logs to UI format
+                const formattedLogs = logs.map((log: any) => ({
+                    id: log.id.toString(),
+                    type: log.type,
+                    category: log.type === 'RFID' || log.type.includes('Guest') ? 'Guest' : 'Employee', // Simplified logic, can be refined
+                    name: log.message || "Unknown User",
+                    position: "Room Access",
+                    cardId: log.cardId,
+                    deviceId: log.deviceId,
+                    access: log.access ? "Authorized" : "Denied",
+                    time: new Date(log.timestamp).toLocaleString()
+                }));
 
                 setTransactions(formattedLogs);
             } else {
