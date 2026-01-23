@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/firebase"; // Import Firebase
+import { ref, set } from "firebase/database"; // Realtime DB functions
 
 // POST: Check In Guest
 export async function POST(req: NextRequest) {
@@ -122,6 +124,15 @@ export async function POST(req: NextRequest) {
             where: { id: roomId },
             data: { status: "Occupied" }
         });
+
+        // 6. SYNC TO FIREBASE (Allow Guest Access to Room Device)
+        if (room.deviceId && cardId) {
+            console.log(`[Firebase] Syncing Room ${roomId} (Device: ${room.deviceId}) -> Card ${cardId}`);
+
+            // Path: devices/DEVICE_ID/authorized_card
+            const deviceRef = ref(db, `devices/${room.deviceId}/authorized_card`);
+            await set(deviceRef, cardId); // Set the card ID in Firebase
+        }
 
         return NextResponse.json(guest);
 

@@ -1,0 +1,217 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/guests/[guestId]",
+      "regex": "^/api/guests/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPguestId": "nxtPguestId"
+      },
+      "namedRegex": "^/api/guests/(?<nxtPguestId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/dashboard/records/[roomId]",
+      "regex": "^/dashboard/records/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtProomId": "nxtProomId"
+      },
+      "namedRegex": "^/dashboard/records/(?<nxtProomId>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/api/analytics",
+      "regex": "^/api/analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/analytics(?:/)?$"
+    },
+    {
+      "page": "/api/auth/login",
+      "regex": "^/api/auth/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/login(?:/)?$"
+    },
+    {
+      "page": "/api/auth/register",
+      "regex": "^/api/auth/register(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/register(?:/)?$"
+    },
+    {
+      "page": "/api/ble/entry",
+      "regex": "^/api/ble/entry(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ble/entry(?:/)?$"
+    },
+    {
+      "page": "/api/ble/event",
+      "regex": "^/api/ble/event(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ble/event(?:/)?$"
+    },
+    {
+      "page": "/api/ble/exit",
+      "regex": "^/api/ble/exit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ble/exit(?:/)?$"
+    },
+    {
+      "page": "/api/ble/sync",
+      "regex": "^/api/ble/sync(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ble/sync(?:/)?$"
+    },
+    {
+      "page": "/api/dashboard/stats",
+      "regex": "^/api/dashboard/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dashboard/stats(?:/)?$"
+    },
+    {
+      "page": "/api/employees",
+      "regex": "^/api/employees(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/employees(?:/)?$"
+    },
+    {
+      "page": "/api/export/monthly-report",
+      "regex": "^/api/export/monthly\\-report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/export/monthly\\-report(?:/)?$"
+    },
+    {
+      "page": "/api/guests",
+      "regex": "^/api/guests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/guests(?:/)?$"
+    },
+    {
+      "page": "/api/guests/transfer",
+      "regex": "^/api/guests/transfer(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/guests/transfer(?:/)?$"
+    },
+    {
+      "page": "/api/rfid/check",
+      "regex": "^/api/rfid/check(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/rfid/check(?:/)?$"
+    },
+    {
+      "page": "/api/rfid/log",
+      "regex": "^/api/rfid/log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/rfid/log(?:/)?$"
+    },
+    {
+      "page": "/api/rooms",
+      "regex": "^/api/rooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/rooms(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/dashboard/admin/export",
+      "regex": "^/dashboard/admin/export(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/admin/export(?:/)?$"
+    },
+    {
+      "page": "/dashboard/employees",
+      "regex": "^/dashboard/employees(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/employees(?:/)?$"
+    },
+    {
+      "page": "/dashboard/progress",
+      "regex": "^/dashboard/progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/progress(?:/)?$"
+    },
+    {
+      "page": "/dashboard/records",
+      "regex": "^/dashboard/records(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/records(?:/)?$"
+    },
+    {
+      "page": "/dashboard/restaurant",
+      "regex": "^/dashboard/restaurant(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/restaurant(?:/)?$"
+    },
+    {
+      "page": "/dashboard/rooms",
+      "regex": "^/dashboard/rooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/rooms(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

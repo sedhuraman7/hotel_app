@@ -1,0 +1,3 @@
+module.exports=[81301,a=>{a.v({className:"outfit_9f4f9187-module__4LtYgq__className",variable:"outfit_9f4f9187-module__4LtYgq__variable"})},33290,a=>{"use strict";var b=a.i(7997),c=a.i(81301);let d={className:c.default.className,style:{fontFamily:"'Outfit', 'Outfit Fallback'",fontStyle:"normal"}};function e({children:a}){return(0,b.jsx)("html",{lang:"en",children:(0,b.jsx)("body",{className:`${d.variable} font-sans antialiased`,children:a})})}null!=c.default.variable&&(d.variable=c.default.variable),a.s(["default",()=>e,"metadata",0,{title:"NS Hotel Management",description:"Premium Smart Hotel Management System"}],33290)}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__4ee1c389._.js.map

@@ -15,14 +15,15 @@ import {
     Calendar
 } from "lucide-react";
 import Link from "next/link";
-
-// Initial State
-const initialTransactions: any[] = [];
+import { db } from "@/lib/firebase"; // Firebase Config
+import { ref, get, query, orderByChild, startAt, endAt } from "firebase/database";
 
 export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: string }> }) {
     const { roomId } = use(params);
     const [activeTab, setActiveTab] = useState("Transaction");
-    const [dateRange, setDateRange] = useState({ start: "2026-01-14", end: "2026-01-15" });
+    const [dateRange, setDateRange] = useState({ start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] });
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
 
     const tabs = [
         { id: "Guest Checkin", icon: UserCheck, label: "Guest Checkin" },
@@ -32,6 +33,76 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
         { id: "Transaction", icon: History, label: "Transaction" },
         { id: "Restaurant", icon: Utensils, label: "Restaurant" },
     ];
+
+    const fetchTransactions = async () => {
+        if (!dateRange.start || !dateRange.end) return;
+        setLoading(true);
+        setTransactions([]);
+
+        try {
+            // Fetch Logs from Firebase
+            const logsRef = ref(db, 'logs');
+            const snapshot = await get(logsRef); // Get all logs (Optimizable later)
+
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                // Data format: { "TIMESTAMP": "Card: XXX | Device: YYY", ... }
+
+                const formattedLogs = Object.entries(data).map(([key, value]: [string, any]) => {
+                    // Extract Details using Regex or Split
+                    // Format: "Card: 09002935E5F0 | Device: 20E7C8691180"
+                    const cardMatch = value.toString().match(/Card:?\s*([A-Z0-9]+)/i);
+                    const deviceMatch = value.toString().match(/Device:?\s*([A-Z0-9]+)/i);
+                    const typeMatch = value.toString().match(/\(([^)]+)\)/); // Extracts (Guest), (Staff), (Auto-OFF)
+
+                    const timestamp = parseInt(key);
+                    // Handle Milliseconds vs Seconds (ESP32 sends seconds sometimes if not config'd right, but we fixed to ms)
+                    // If timestamp look small (< 2020 year), multiply by 1000? No, we trust ESP32 now sends ms.
+                    const dateObj = new Date(timestamp);
+                    const dateStr = dateObj.toISOString().split('T')[0];
+
+                    // Filter by Date Range
+                    if (dateStr < dateRange.start || dateStr > dateRange.end) return null;
+
+                    // Determine Access Type / Name
+                    let accessType = "Authorized";
+                    let rowType = "Entry";
+
+                    if (value.toString().includes("Removed")) {
+                        accessType = "Exit";
+                        rowType = "Exit";
+                    }
+                    if (value.toString().includes("Auto-OFF")) {
+                        accessType = "System";
+                        rowType = "Auto-Lock";
+                    }
+                    if (value.toString().includes("BLE OUT")) {
+                        rowType = "BLE Exit";
+                        accessType = "Exit";
+                    }
+
+                    return {
+                        id: key,
+                        type: rowType,
+                        name: typeMatch ? typeMatch[1] : (rowType === "Exit" ? "Guest/Staff" : "Unknown"),
+                        position: "Room Access",
+                        cardId: cardMatch ? cardMatch[1] : (value.toString().includes("BLE") ? "BLE Tag" : "N/A"),
+                        deviceId: deviceMatch ? deviceMatch[1] : "N/A",
+                        access: accessType,
+                        time: dateObj.toLocaleString()
+                    };
+                }).filter(log => log !== null).reverse(); // Show newest first
+
+                setTransactions(formattedLogs);
+            } else {
+                setTransactions([]);
+            }
+        } catch (error) {
+            console.error("Error fetching logs:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="flex flex-col md:flex-row gap-6 min-h-[80vh]">
@@ -91,9 +162,13 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
                             </div>
                         </div>
                         <div className="sm:pb-1">
-                            <button className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2">
+                            <button
+                                onClick={fetchTransactions}
+                                disabled={loading}
+                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium text-sm shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
+                            >
                                 <Search className="w-4 h-4" />
-                                Get {activeTab === "Transaction" ? "Transactions" : activeTab.split(" ")[1]}
+                                {loading ? "Loading..." : "Get Transactions"}
                             </button>
                         </div>
                     </div>
@@ -106,19 +181,19 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="bg-purple-50 text-purple-700 p-4 rounded-xl flex items-center justify-between border border-purple-100">
                                 <span className="flex items-center gap-2 font-semibold"><User className="w-4 h-4" /> Employee Transactions</span>
-                                <span className="font-bold text-lg">0</span>
+                                <span className="font-bold text-lg">{transactions.filter(t => t.name?.includes("Staff")).length}</span>
                             </div>
                             <div className="bg-blue-50 text-blue-700 p-4 rounded-xl flex items-center justify-between border border-blue-100">
                                 <span className="flex items-center gap-2 font-semibold"><UserCheck className="w-4 h-4" /> Guest Transactions</span>
-                                <span className="font-bold text-lg">0</span>
+                                <span className="font-bold text-lg">{transactions.filter(t => t.name?.includes("Guest")).length}</span>
                             </div>
                             <div className="bg-orange-50 text-orange-700 p-4 rounded-xl flex items-center justify-between border border-orange-100">
-                                <span className="flex items-center gap-2 font-semibold"><HelpCircle className="w-4 h-4" /> Unknown Transactions</span>
-                                <span className="font-bold text-lg">0</span>
+                                <span className="flex items-center gap-2 font-semibold"><HelpCircle className="w-4 h-4" /> Other Events</span>
+                                <span className="font-bold text-lg">{transactions.filter(t => !t.name?.includes("Guest") && !t.name?.includes("Staff")).length}</span>
                             </div>
                             <div className="bg-slate-100 text-slate-700 p-4 rounded-xl flex items-center justify-between border border-slate-200 sm:col-span-3">
                                 <span className="font-bold">Total</span>
-                                <span className="font-bold text-lg">0</span>
+                                <span className="font-bold text-lg">{transactions.length}</span>
                             </div>
                         </div>
 
@@ -151,20 +226,33 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {initialTransactions.map((txn, index) => (
-                                            <tr key={txn.id} className="hover:bg-slate-50/50">
-                                                <td className="p-4 text-sm text-slate-500">{index + 1}</td>
-                                                <td className="p-4 text-sm font-medium text-slate-700">{txn.id}</td>
-                                                <td className="p-4 text-sm text-slate-600">{txn.type}</td>
-                                                <td className="p-4 text-sm text-slate-600">{txn.name}</td>
-                                                <td className="p-4 text-sm text-slate-600">{txn.position}</td>
-                                                <td className="p-4 text-sm font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded w-fit">{txn.cardId}</td>
-                                                <td className="p-4 text-sm">
-                                                    <span className="text-green-700 bg-green-100 px-2 py-1 rounded text-xs font-bold">{txn.access}</span>
+                                        {transactions.length > 0 ? (
+                                            transactions.map((txn, index) => (
+                                                <tr key={txn.id} className="hover:bg-slate-50/50">
+                                                    <td className="p-4 text-sm text-slate-500">{index + 1}</td>
+                                                    <td className="p-4 text-sm font-medium text-slate-700">{txn.id}</td>
+                                                    <td className="p-4 text-sm text-slate-600">{txn.type}</td>
+                                                    <td className="p-4 text-sm text-slate-600">{txn.name}</td>
+                                                    <td className="p-4 text-sm text-slate-600">{txn.position}</td>
+                                                    <td className="p-4 text-sm font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded w-fit">{txn.cardId}</td>
+                                                    <td className="p-4 text-sm">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${txn.access === 'Exit' ? 'bg-orange-100 text-orange-700' :
+                                                                txn.access === 'System' ? 'bg-red-100 text-red-700' :
+                                                                    'bg-green-100 text-green-700'
+                                                            }`}>
+                                                            {txn.access}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-sm text-slate-500 text-right">{txn.time}</td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={8} className="p-8 text-center text-slate-400">
+                                                    {loading ? "Fetching logs..." : "No transactions found for this date."}
                                                 </td>
-                                                <td className="p-4 text-sm text-slate-500 text-right">{txn.time}</td>
                                             </tr>
-                                        ))}
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
