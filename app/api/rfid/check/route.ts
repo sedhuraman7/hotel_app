@@ -65,26 +65,8 @@ export async function GET(req: NextRequest) {
             }
         });
 
-        // 5. Log to Firebase (For Realtime Dashboard)
-        try {
-            const { db } = require("@/lib/firebase");
-            const { ref, set } = require("firebase/database");
-            const timestamp = Date.now().toString(); // ms
-            const logRef = ref(db, `logs/${timestamp}`);
-
-            let fbLogMsg = "";
-            if (accessGranted) {
-                fbLogMsg = `Card: ${cardId} (${name}) | Device: ${deviceId}`;
-            } else {
-                fbLogMsg = `ACCESS DENIED: ${cardId} | Device: ${deviceId}`;
-            }
-
-            // Fire and forget - don't await strictly to slow down response
-            set(logRef, fbLogMsg).catch((e: any) => console.error("Firebase Log Error:", e));
-
-        } catch (e) {
-            console.error("Firebase Import/Log Error:", e);
-        }
+        // 5. Log to Firebase (REMOVED)
+        // System now uses SQL Logs only via prisma.accessLog.create above.
 
         return NextResponse.json({
             status: accessGranted ? 1 : 0,

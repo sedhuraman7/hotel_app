@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { db } from "@/lib/firebase"; // Import Firebase
-import { ref, set } from "firebase/database"; // Realtime DB functions
+
 
 // POST: Check In Guest
 export async function POST(req: NextRequest) {
@@ -70,12 +69,8 @@ export async function POST(req: NextRequest) {
             data: { status: "Occupied" }
         });
 
-        // 6. SYNC TO FIREBASE (Allow Guest Access to Room Device)
-        if (room.deviceId && cardId) {
-            console.log(`[Firebase] Syncing Room ${roomId} (Device: ${room.deviceId}) -> Card ${cardId}`);
-            const deviceRef = ref(db, `devices/${room.deviceId}/authorized_card`);
-            await set(deviceRef, cardId); // Set the card ID in Firebase
-        }
+        // 6. SYNC TO FIREBASE (REMOVED)
+        // Access control is now checked directly against the SQL DB via the API.
 
         // 3. Send Email (Moved after logic to ensure success first)
         if (customer && (email || customer.email)) {
