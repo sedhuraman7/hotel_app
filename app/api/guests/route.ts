@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Send Email (Moved after logic to ensure success first)
-        if ((email || customer.email) && customer) {
+        if (customer && (email || customer.email)) {
             const mailTo = email || customer.email;
             if (mailTo) {
                 const { sendEmail } = require("@/lib/mail");

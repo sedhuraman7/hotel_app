@@ -28,8 +28,15 @@ export async function GET(req: NextRequest) {
         if (!room) {
             logMessage = "Device Not Configured";
         } else {
-            // 2. Check Employee
-            const employee = await prisma.employee.findUnique({ where: { rfidCardId: cardId } });
+            // 2. Check Employee (Case Insensitive search)
+            const employee = await prisma.employee.findFirst({
+                where: {
+                    rfidCardId: {
+                        equals: cardId,
+                        mode: 'insensitive'
+                    }
+                }
+            });
 
             if (employee && employee.status === "Active") {
                 accessGranted = true;
@@ -47,7 +54,7 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // 4. Log to Database
+        // 4. Log to Database (SQL)
         await prisma.accessLog.create({
             data: {
                 deviceId: deviceId || "unknown",
@@ -57,6 +64,27 @@ export async function GET(req: NextRequest) {
                 message: logMessage
             }
         });
+
+        // 5. Log to Firebase (For Realtime Dashboard)
+        try {
+            const { db } = require("@/lib/firebase");
+            const { ref, set } = require("firebase/database");
+            const timestamp = Date.now().toString(); // ms
+            const logRef = ref(db, `logs/${timestamp}`);
+
+            let fbLogMsg = "";
+            if (accessGranted) {
+                fbLogMsg = `Card: ${cardId} (${name}) | Device: ${deviceId}`;
+            } else {
+                fbLogMsg = `ACCESS DENIED: ${cardId} | Device: ${deviceId}`;
+            }
+
+            // Fire and forget - don't await strictly to slow down response
+            set(logRef, fbLogMsg).catch((e: any) => console.error("Firebase Log Error:", e));
+
+        } catch (e) {
+            console.error("Firebase Import/Log Error:", e);
+        }
 
         return NextResponse.json({
             status: accessGranted ? 1 : 0,
