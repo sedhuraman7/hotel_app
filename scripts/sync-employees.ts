@@ -35,8 +35,9 @@ async function syncEmployees() {
 
         for (const emp of employees) {
             if (emp.rfidCardId) {
-                console.log(`Syncing ${emp.name} (${emp.rfidCardId})...`);
-                await set(ref(db, `employees/${emp.rfidCardId}`), {
+                const safeRfid = emp.rfidCardId.trim().toUpperCase(); // Normalize
+                console.log(`Syncing ${emp.name} (${safeRfid})...`);
+                await set(ref(db, `employees/${safeRfid}`), {
                     name: emp.name,
                     role: emp.role,
                     id: emp.id,
