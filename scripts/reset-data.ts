@@ -1,7 +1,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getDatabase, ref, set, get, child } from "firebase/database";
+import { getDatabase, ref, set, get, child, update } from "firebase/database";
 
 const prisma = new PrismaClient();
 
@@ -68,7 +68,7 @@ async function main() {
             updates[`devices/${deviceId}/authorized_card`] = null;
         });
         if (Object.keys(updates).length > 0) {
-            await ref(db).update(updates);
+            await update(ref(db), updates);
         }
     }
 
