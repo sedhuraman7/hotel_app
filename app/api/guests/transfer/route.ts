@@ -39,31 +39,26 @@ export async function POST(req: NextRequest) {
         // 3. Send Email
         if (guest.customer?.email) {
             const { sendEmail } = require("@/lib/mail");
+            const { generateEmailHtml } = require("@/lib/email-template");
+
             const admin = await prisma.user.findFirst({ orderBy: { createdAt: 'desc' } });
             const hotelName = admin?.hotelName || "Luxury Hotel";
 
-            await sendEmail(
-                guest.customer.email,
-                `Room Transfer Update - ${hotelName}`,
-                `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
-                    <div style="background-color: #003366; color: #fff; padding: 20px; text-align: center;">
-                        <h2 style="margin: 0;">Room Transfer Successful</h2>
-                    </div>
-                    <div style="padding: 20px; color: #333;">
-                        <p>Dear <b>${guest.name}</b>,</p>
-                        <p>Your room has been successfully changed.</p>
-                        
-                        <div style="background-color: #f0f7ff; border-left: 4px solid #003366; padding: 15px; margin: 20px 0;">
-                            <p style="margin: 0;">Old Room: <b>${oldRoomId}</b></p>
-                            <p style="margin: 10px 0 0; font-size: 1.1em;">New Room: <b style="color: #003366;">${newRoomId}</b></p>
-                        </div>
-                        
-                        <p>We hope you enjoy your new room!</p>
+            const content = `
+                <div style="text-align: center;">
+                    <h2 style="color: #4da6ff; margin: 0 0 20px 0;">Room Transfer Successful</h2>
+                    <p style="font-size: 16px;">Dear <strong style="color: #fff;">${guest.name}</strong>,</p>
+                    <p style="color: #ccc;">Your room change request has been completed.</p>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid #4da6ff; padding: 20px; border-radius: 8px; margin: 30px auto; max-width: 400px; text-align: left;">
+                        <p style="margin: 0 0 10px 0; color: #a0a0a0;">Old Room: <del style="color: #666;">${oldRoomId}</del></p>
+                        <p style="margin: 0; font-size: 20px;">New Room: <strong style="color: #fff;">${newRoomId}</strong></p>
                     </div>
                 </div>
-                `
-            );
+            `;
+
+            const html = generateEmailHtml(`Room Transfer Update`, hotelName, content);
+            await sendEmail(guest.customer.email, `Room Transfer Update - ${hotelName}`, html);
         }
 
         return NextResponse.json({ success: true, guest: updatedGuest });

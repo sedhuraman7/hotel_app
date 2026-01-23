@@ -39,39 +39,42 @@ export async function PATCH(
             // Send Email
             if (guest.customer?.email) {
                 const { sendEmail } = require("@/lib/mail");
+                const { generateEmailHtml } = require("@/lib/email-template");
+
                 const admin = await prisma.user.findFirst({ orderBy: { createdAt: 'desc' } });
                 const hotelName = admin?.hotelName || "Luxury Hotel";
 
-                await sendEmail(
-                    guest.customer.email,
-                    `Thank You for Visiting ${hotelName}!`,
-                    `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
-                        <div style="background-color: #003366; color: #fff; padding: 20px; text-align: center;">
-                            <h1 style="margin: 0;">Thank You!</h1>
-                            <p style="margin: 5px 0 0; color: #FFD700;">We hope you enjoyed your stay</p>
-                        </div>
-                        <div style="padding: 20px; color: #333;">
-                            <p>Dear <b>${guest.name}</b>,</p>
-                            <p>You have successfully checked out from <b>${hotelName}</b>.</p>
+                const content = `
+                    <div style="text-align: center;">
+                        <h2 style="color: #4da6ff; margin: 0 0 10px 0;">Thank You for Visiting!</h2>
+                        <p style="color: #ccc; margin-bottom: 30px;">We hope you enjoyed your stay at ${hotelName}.</p>
+                        
+                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 25px; text-align: left; margin-bottom: 30px;">
+                            <h3 style="color: #e0e0e0; margin: 0 0 20px 0; border-bottom: 1px solid #333; padding-bottom: 10px;">🧾 Receipt Summary</h3>
                             
-                            <div style="background-color: #f9f9f9; padding: 15px; margin: 20px 0; border-radius: 10px;">
-                                <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">🧾 Receipt Summary</h3>
-                                <p style="display: flex; justify-content: space-between;"><span>Room Number:</span> <b>${guest.roomId}</b></p>
-                                <p style="display: flex; justify-content: space-between;"><span>Total Amount:</span> <b>₹${guest.totalAmount}</b></p>
-                                <p style="display: flex; justify-content: space-between; color: green;"><span>Payment Status:</span> <b>${guest.paymentStatus}</b></p>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span style="color: #a0a0a0;">Room Number</span>
+                                <span style="color: #fff; font-weight: bold;">${guest.roomId}</span>
                             </div>
-
-                            <div style="text-align: center; margin-top: 20px;">
-                                <p style="font-weight: bold; color: #B8860B;">Current Loyalty Balance</p>
-                                <div style="font-size: 2em; color: #003366;">${guest.customer.points} <span style="font-size: 0.5em;">Pts</span></div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span style="color: #a0a0a0;">Amount Paid</span>
+                                <span style="color: #fff; font-weight: bold;">₹${guest.totalAmount}</span>
                             </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0;">
+                                <span style="color: #a0a0a0;">Status</span>
+                                <span style="color: #00ff00; font-weight: bold;">${guest.paymentStatus}</span>
+                            </div>
+                        </div>
 
-                            <p style="text-align: center; margin-top: 30px; font-size: 0.9em; color: #666;">We look forward to welcoming you back soon!</p>
+                        <div style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 12px; padding: 20px;">
+                            <p style="color: #FFD700; margin: 0 0 5px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Current Loyalty Balance</p>
+                            <div style="font-size: 32px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);">${guest.customer.points} <span style="font-size: 16px; color: #ccc;">Pts</span></div>
                         </div>
                     </div>
-                    `
-                );
+                `;
+
+                const html = generateEmailHtml(`Thank You!`, hotelName, content);
+                await sendEmail(guest.customer.email, `Thank You for Visiting ${hotelName}!`, html);
             }
         }
 
