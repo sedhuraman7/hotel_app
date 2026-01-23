@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
         const { password: _, ...userWithoutPassword } = user;
         return NextResponse.json(userWithoutPassword);
 
-    } catch (error) {
-        console.error("Register Error:", error);
-        return NextResponse.json({ error: "Registration failed" }, { status: 500 });
+    } catch (error: any) {
+        console.error("Register Error Detailed:", error);
+        return NextResponse.json({ error: error.message || "Registration failed" }, { status: 500 });
     }
 }
