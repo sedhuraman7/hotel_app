@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { ref, set, remove } from "firebase/database";
 
 // GET: List all employees
 export async function GET() {
@@ -43,6 +45,21 @@ export async function POST(req: NextRequest) {
             }
         });
 
+        // Sync to Firebase if RFID is present
+        if (body.rfidCardId) {
+            try {
+                await set(ref(db, `employees/${body.rfidCardId}`), {
+                    name: body.name,
+                    role: body.role,
+                    id: body.id,
+                    active: true
+                });
+            } catch (fbError) {
+                console.error("Firebase Sync Error:", fbError);
+                // We don't rollback the Prisma creation, but we log the error
+            }
+        }
+
         return NextResponse.json(employee);
     } catch (error: any) {
         console.error("Add Employee Error:", error);
@@ -58,9 +75,25 @@ export async function DELETE(req: NextRequest) {
 
         if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
+        // Get employee details first to find RFID
+        const employee = await prisma.employee.findUnique({ where: { id } });
+
+        if (!employee) {
+            return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+        }
+
         await prisma.employee.delete({
             where: { id }
         });
+
+        // Remove from Firebase
+        if (employee.rfidCardId) {
+            try {
+                await remove(ref(db, `employees/${employee.rfidCardId}`));
+            } catch (fbError) {
+                console.error("Firebase Remove Error:", fbError);
+            }
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

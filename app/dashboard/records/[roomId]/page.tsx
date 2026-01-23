@@ -24,6 +24,7 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
     const [dateRange, setDateRange] = useState({ start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] });
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [activeSubTab, setActiveSubTab] = useState('All Transactions');
 
     const tabs = [
         { id: "Guest Checkin", icon: UserCheck, label: "Guest Checkin" },
@@ -64,29 +65,44 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
                     // Filter by Date Range
                     if (dateStr < dateRange.start || dateStr > dateRange.end) return null;
 
-                    // Determine Access Type / Name
+                    // Determine Access Type / Name / Category
                     let accessType = "Authorized";
                     let rowType = "Entry";
+                    let category = "Other"; // Default
 
-                    if (value.toString().includes("Removed")) {
+                    const logString = value.toString();
+
+                    if (logString.includes("(Staff)")) {
+                        category = "Employee";
+                        rowType = "Entry (Staff)";
+                    } else if (logString.includes("BLE")) {
+                        category = "Employee";
+                        rowType = "BLE Entry/Exit"; // Or generic BLE
+                        if (logString.includes("OUT")) rowType = "BLE Exit";
+                    } else if (logString.includes("(Guest)")) {
+                        category = "Guest";
+                        rowType = "Entry (Guest)";
+                    } else if (logString.includes("DENIED")) {
+                        category = "Unknown";
+                        rowType = "Access Denied";
+                        accessType = "Denied";
+                    } else if (logString.includes("Removed")) {
                         accessType = "Exit";
-                        rowType = "Exit";
-                    }
-                    if (value.toString().includes("Auto-OFF")) {
+                        rowType = "Card Removed";
+                        category = "Guest";
+                    } else if (logString.includes("Auto-OFF")) {
                         accessType = "System";
                         rowType = "Auto-Lock";
-                    }
-                    if (value.toString().includes("BLE OUT")) {
-                        rowType = "BLE Exit";
-                        accessType = "Exit";
+                        category = "Employee"; // Usually housekeeping
                     }
 
                     return {
                         id: key,
                         type: rowType,
-                        name: typeMatch ? typeMatch[1] : (rowType === "Exit" ? "Guest/Staff" : "Unknown"),
+                        category: category,
+                        name: typeMatch ? typeMatch[1] : (category === "Unknown" ? "Unknown User" : category),
                         position: "Room Access",
-                        cardId: cardMatch ? cardMatch[1] : (value.toString().includes("BLE") ? "BLE Tag" : "N/A"),
+                        cardId: cardMatch ? cardMatch[1] : (value.toString().includes("BLE") ? "BLE Tag" : (cardMatch ? cardMatch[1] : "N/A")),
                         deviceId: deviceMatch ? deviceMatch[1] : "N/A",
                         access: accessType,
                         time: dateObj.toLocaleString()
@@ -181,15 +197,15 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="bg-purple-50 text-purple-700 p-4 rounded-xl flex items-center justify-between border border-purple-100">
                                 <span className="flex items-center gap-2 font-semibold"><User className="w-4 h-4" /> Employee Transactions</span>
-                                <span className="font-bold text-lg">{transactions.filter(t => t.name?.includes("Staff")).length}</span>
+                                <span className="font-bold text-lg">{transactions.filter(t => t.category === "Employee").length}</span>
                             </div>
                             <div className="bg-blue-50 text-blue-700 p-4 rounded-xl flex items-center justify-between border border-blue-100">
                                 <span className="flex items-center gap-2 font-semibold"><UserCheck className="w-4 h-4" /> Guest Transactions</span>
-                                <span className="font-bold text-lg">{transactions.filter(t => t.name?.includes("Guest")).length}</span>
+                                <span className="font-bold text-lg">{transactions.filter(t => t.category === "Guest").length}</span>
                             </div>
                             <div className="bg-orange-50 text-orange-700 p-4 rounded-xl flex items-center justify-between border border-orange-100">
                                 <span className="flex items-center gap-2 font-semibold"><HelpCircle className="w-4 h-4" /> Other Events</span>
-                                <span className="font-bold text-lg">{transactions.filter(t => !t.name?.includes("Guest") && !t.name?.includes("Staff")).length}</span>
+                                <span className="font-bold text-lg">{transactions.filter(t => t.category === "Unknown").length}</span>
                             </div>
                             <div className="bg-slate-100 text-slate-700 p-4 rounded-xl flex items-center justify-between border border-slate-200 sm:col-span-3">
                                 <span className="font-bold">Total</span>
@@ -198,15 +214,16 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
                         </div>
 
                         {/* Sub Tabs */}
-                        <div className="flex gap-2 border-b border-slate-200 pb-1">
+                        <div className="flex gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
                             {['All Transactions', 'Employee', 'Guest', 'Unknown'].map((tab) => (
-                                <button key={tab} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveSubTab(tab)}
+                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${activeSubTab === tab ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-50"}`}
+                                >
                                     {tab}
                                 </button>
                             ))}
-                            <button className="ml-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-md shadow-blue-500/20">
-                                All Transactions
-                            </button>
                         </div>
 
                         {/* Table */}
@@ -226,33 +243,36 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ roomId: 
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {transactions.length > 0 ? (
-                                            transactions.map((txn, index) => (
-                                                <tr key={txn.id} className="hover:bg-slate-50/50">
-                                                    <td className="p-4 text-sm text-slate-500">{index + 1}</td>
-                                                    <td className="p-4 text-sm font-medium text-slate-700">{txn.id}</td>
-                                                    <td className="p-4 text-sm text-slate-600">{txn.type}</td>
-                                                    <td className="p-4 text-sm text-slate-600">{txn.name}</td>
-                                                    <td className="p-4 text-sm text-slate-600">{txn.position}</td>
-                                                    <td className="p-4 text-sm font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded w-fit">{txn.cardId}</td>
-                                                    <td className="p-4 text-sm">
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${txn.access === 'Exit' ? 'bg-orange-100 text-orange-700' :
-                                                                txn.access === 'System' ? 'bg-red-100 text-red-700' :
+                                        {transactions.filter(t => activeSubTab === 'All Transactions' || t.category === activeSubTab).length > 0 ? (
+                                            transactions
+                                                .filter(t => activeSubTab === 'All Transactions' || t.category === activeSubTab)
+                                                .map((txn, index) => (
+                                                    <tr key={txn.id} className="hover:bg-slate-50/50">
+                                                        <td className="p-4 text-sm text-slate-500">{index + 1}</td>
+                                                        <td className="p-4 text-sm font-medium text-slate-700">{txn.id}</td>
+                                                        <td className="p-4 text-sm text-slate-600">{txn.type}</td>
+                                                        <td className="p-4 text-sm text-slate-600">{txn.name}</td>
+                                                        <td className="p-4 text-sm text-slate-600">{txn.position}</td>
+                                                        <td className="p-4 text-sm font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded w-fit">{txn.cardId}</td>
+                                                        <td className="p-4 text-sm">
+                                                            <span className={`px-2 py-1 rounded text-xs font-bold ${txn.access === 'Exit' || txn.access === 'Removed' ? 'bg-orange-100 text-orange-700' :
+                                                                txn.access === 'System' || txn.access === 'Denied' ? 'bg-red-100 text-red-700' :
                                                                     'bg-green-100 text-green-700'
-                                                            }`}>
-                                                            {txn.access}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-4 text-sm text-slate-500 text-right">{txn.time}</td>
-                                                </tr>
-                                            ))
+                                                                }`}>
+                                                                {txn.access}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-4 text-sm text-slate-500 text-right">{txn.time}</td>
+                                                    </tr>
+                                                ))
                                         ) : (
                                             <tr>
                                                 <td colSpan={8} className="p-8 text-center text-slate-400">
                                                     {loading ? "Fetching logs..." : "No transactions found for this date."}
                                                 </td>
                                             </tr>
-                                        )}
+                                        )
+                                        }
                                     </tbody>
                                 </table>
                             </div>
