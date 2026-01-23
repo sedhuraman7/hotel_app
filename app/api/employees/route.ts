@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { db } from "@/lib/firebase";
-import { ref, set, remove } from "firebase/database";
+
 
 // GET: List all employees
 export async function GET() {
@@ -45,20 +44,8 @@ export async function POST(req: NextRequest) {
             }
         });
 
-        // Sync to Firebase if RFID is present
-        if (body.rfidCardId) {
-            try {
-                await set(ref(db, `employees/${body.rfidCardId}`), {
-                    name: body.name,
-                    role: body.role,
-                    id: body.id,
-                    active: true
-                });
-            } catch (fbError) {
-                console.error("Firebase Sync Error:", fbError);
-                // We don't rollback the Prisma creation, but we log the error
-            }
-        }
+        // Sync to Firebase (REMOVED)
+        // Employee data is now SQL-only.
 
         return NextResponse.json(employee);
     } catch (error: any) {
@@ -86,14 +73,8 @@ export async function DELETE(req: NextRequest) {
             where: { id }
         });
 
-        // Remove from Firebase
-        if (employee.rfidCardId) {
-            try {
-                await remove(ref(db, `employees/${employee.rfidCardId}`));
-            } catch (fbError) {
-                console.error("Firebase Remove Error:", fbError);
-            }
-        }
+        // Remove from Firebase (REMOVED)
+        // SQL only.
 
         return NextResponse.json({ success: true });
     } catch (error) {
