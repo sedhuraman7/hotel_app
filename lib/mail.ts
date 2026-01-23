@@ -7,7 +7,9 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
-            }
+            },
+            logger: true,
+            debug: true
         });
 
         const mailOptions = {

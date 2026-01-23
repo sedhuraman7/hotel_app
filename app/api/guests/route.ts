@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
                     const wifiSsid = admin?.wifiSsid || "Ask Reception";
                     const wifiPass = admin?.wifiPass || "---";
 
+                    console.log(`[Email Debug] Attempting to send Check-in email to: ${mailTo}`);
+                    console.log(`[Email Debug] SMTP User: ${process.env.EMAIL_USER ? 'Set' : 'Missing'}`);
+
                     // WiFi QR Code
                     const qrData = `WIFI:S:${wifiSsid};T:WPA;P:${wifiPass};;`;
                     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
