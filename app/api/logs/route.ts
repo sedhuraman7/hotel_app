@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/store";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -10,63 +10,66 @@ export async function GET(req: NextRequest) {
 
     if (!roomId && !guestId) return NextResponse.json({ error: "Missing roomId or guestId" }, { status: 400 });
 
-    let logs = db.getLogs();
+    try {
+        let whereCondition: any = {};
 
-    // FILTER BY GUEST ID
-    if (guestId) {
-        // Try to find if this guestId is actually a cardId (simplest fallback)
-        // Or search rooms for this guest
-        let foundCardId = null;
+        // 1. FILTER BY GUEST ID
+        if (guestId) {
+            // Find Guest to get Card ID
+            const guest = await prisma.guest.findUnique({
+                where: { id: guestId }
+            });
 
-        // 1. Check if guestId matches a Card ID directly (if passed from frontend)
-        // 2. Or if it's a Guest Database ID, find the card.
-        // For this demo, let's assume the ID passed IS the Card ID for simplicity,
-        // OR search the rooms.
-
-        const rooms = db.getRooms();
-        for (const r of rooms) {
-            // Check if guest object exists and matches ID
-            if (r.currentGuest && (r.currentGuest as any).id === guestId) {
-                foundCardId = r.currentGuest.cardId;
-                break;
-            }
-        }
-
-        if (foundCardId) {
-            logs = logs.filter(l => l.cardId === foundCardId);
-        } else {
-            // Fallback: Assume the ID passed is a Card ID or Guest Name match?
-            // Let's filter by cardId = guestId
-            logs = logs.filter(l => l.cardId === guestId);
-        }
-    }
-    // FILTER BY ROOM ID
-    else if (roomId) {
-        const room = db.getRoomById(roomId);
-        let targetDeviceId = room?.deviceId;
-
-        if (targetDeviceId) {
-            logs = logs.filter(l => l.deviceId === targetDeviceId);
-        } else {
-            if (room?.currentGuest?.cardId) {
-                logs = logs.filter(l => l.cardId === room.currentGuest!.cardId);
+            if (guest && guest.rfidCardId) {
+                // Fetch logs for this card
+                whereCondition.cardId = guest.rfidCardId;
             } else {
-                logs = [];
+                // Fallback: If no guest found, return empty
+                return NextResponse.json([]);
             }
         }
-    }
+        // 2. FILTER BY ROOM ID
+        else if (roomId) {
+            // Find Room to get Device ID
+            const room = await prisma.room.findUnique({
+                where: { id: roomId },
+                include: { currentGuest: true }
+            });
 
-    // Filter by Date Range
-    if (start && end) {
-        const startDate = new Date(start);
-        const endDate = new Date(end);
-        endDate.setHours(23, 59, 59, 999);
+            if (room && room.deviceId) {
+                // Fetch logs for this device
+                whereCondition.deviceId = room.deviceId;
+            } else if (room?.currentGuest?.rfidCardId) {
+                // Fallback: Fetch logs for current guest
+                whereCondition.cardId = room.currentGuest.rfidCardId;
+            } else {
+                return NextResponse.json([]);
+            }
+        }
 
-        logs = logs.filter(l => {
-            const logTime = new Date(l.timestamp);
-            return logTime >= startDate && logTime <= endDate;
+        // 3. Date Range Filter
+        if (start && end) {
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            endDate.setHours(23, 59, 59, 999);
+
+            whereCondition.timestamp = {
+                gte: startDate,
+                lte: endDate
+            };
+        }
+
+        // 4. Execute Query
+        const logs = await prisma.accessLog.findMany({
+            where: whereCondition,
+            orderBy: { timestamp: 'desc' },
+            take: 100
         });
-    }
 
-    return NextResponse.json(logs);
+        return NextResponse.json(logs);
+
+    } catch (error) {
+        console.error("Logs Fetch Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
 }
