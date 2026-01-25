@@ -4,46 +4,63 @@ import { db } from "@/lib/store";
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const roomId = searchParams.get("roomId");
+    const guestId = searchParams.get("guestId");
     const start = searchParams.get("start");
     const end = searchParams.get("end");
 
-    if (!roomId) return NextResponse.json({ error: "Missing roomId" }, { status: 400 });
+    if (!roomId && !guestId) return NextResponse.json({ error: "Missing roomId or guestId" }, { status: 400 });
 
-    // 1. Find Device ID for Room
-    const room = db.getRoomById(roomId);
-
-    // If room not found or no device assigned, return empty or all logs?
-    // Let's return empty if no device binding found
-    // Or if we want to show logs for UNKNOWN logs that matched a card assigned to this room? 
-    // Best: Filter by Device ID attached to Room.
-
-    let targetDeviceId = room?.deviceId;
-
-    // Get All Logs
     let logs = db.getLogs();
 
-    // Filter by Device ID if room has one
-    if (targetDeviceId) {
-        logs = logs.filter(l => l.deviceId === targetDeviceId);
-    } else {
-        // If room has no device, maybe look for logs where cardId matches current guest?
-        // For now, return empty to be safe
-        // return NextResponse.json([]);
-        // Actually, for demo, if no device ID, let's just return logs relevant to the room's guest card?
-        if (room?.currentGuest?.cardId) {
-            logs = logs.filter(l => l.cardId === room.currentGuest!.cardId);
+    // FILTER BY GUEST ID
+    if (guestId) {
+        // Try to find if this guestId is actually a cardId (simplest fallback)
+        // Or search rooms for this guest
+        let foundCardId = null;
+
+        // 1. Check if guestId matches a Card ID directly (if passed from frontend)
+        // 2. Or if it's a Guest Database ID, find the card.
+        // For this demo, let's assume the ID passed IS the Card ID for simplicity,
+        // OR search the rooms.
+
+        const rooms = db.getRooms();
+        for (const r of rooms) {
+            // Check if guest object exists and matches ID
+            if (r.currentGuest && (r.currentGuest as any).id === guestId) {
+                foundCardId = r.currentGuest.cardId;
+                break;
+            }
+        }
+
+        if (foundCardId) {
+            logs = logs.filter(l => l.cardId === foundCardId);
         } else {
-            // No device, no guest. Return empty.
-            // Unless we want to show ALL logs for debugging? No.
-            logs = [];
+            // Fallback: Assume the ID passed is a Card ID or Guest Name match?
+            // Let's filter by cardId = guestId
+            logs = logs.filter(l => l.cardId === guestId);
+        }
+    }
+    // FILTER BY ROOM ID
+    else if (roomId) {
+        const room = db.getRoomById(roomId);
+        let targetDeviceId = room?.deviceId;
+
+        if (targetDeviceId) {
+            logs = logs.filter(l => l.deviceId === targetDeviceId);
+        } else {
+            if (room?.currentGuest?.cardId) {
+                logs = logs.filter(l => l.cardId === room.currentGuest!.cardId);
+            } else {
+                logs = [];
+            }
         }
     }
 
-    // Filter by Date Range (Optional)
+    // Filter by Date Range
     if (start && end) {
         const startDate = new Date(start);
         const endDate = new Date(end);
-        endDate.setHours(23, 59, 59, 999); // End of day
+        endDate.setHours(23, 59, 59, 999);
 
         logs = logs.filter(l => {
             const logTime = new Date(l.timestamp);
