@@ -80,5 +80,8 @@ export const db = {
         return newLog;
     },
 
-    getLogs: () => logs,
+    getLogs: (cardId?: string) => {
+        if (cardId) return logs.filter(l => l.cardId === cardId);
+        return logs;
+    },
 };
