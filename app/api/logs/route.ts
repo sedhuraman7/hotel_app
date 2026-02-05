@@ -15,17 +15,25 @@ export async function GET(req: NextRequest) {
 
         // 1. FILTER BY GUEST ID
         if (guestId) {
-            // Find Guest to get Card ID
+            // Find Guest and include Room to get Device ID
             const guest = await prisma.guest.findUnique({
-                where: { id: guestId }
+                where: { id: guestId },
+                include: { room: true }
             });
 
-            if (guest && guest.rfidCardId) {
-                // Fetch logs for this card
-                whereCondition.cardId = guest.rfidCardId;
+            if (guest) {
+                // Priority: Fetch logs for the ROOM DEVICE (to see Employee, BLE, Guest, etc.)
+                if (guest.room && guest.room.deviceId) {
+                    whereCondition.deviceId = guest.room.deviceId;
+                }
+                // Fallback: If no device assigned to room, just check for this user's card
+                else if (guest.rfidCardId) {
+                    whereCondition.cardId = guest.rfidCardId;
+                } else {
+                    return NextResponse.json([]);
+                }
             } else {
-                // Fallback: If no guest found, return empty
-                return NextResponse.json([]);
+                return NextResponse.json({ error: "Guest not found" }, { status: 404 });
             }
         }
         // 2. FILTER BY ROOM ID
