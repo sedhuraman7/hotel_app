@@ -243,20 +243,36 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                                                     </tr>
                                                 ))
 
-                {/* Placeholders for other tabs */}
-                                        {activeTab !== "Transaction" && (
-                                            <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-slate-100">
-                                                <div className="inline-flex justify-center items-center w-20 h-20 bg-slate-50 rounded-full mb-4">
-                                                    {tabs.find(t => t.id === activeTab)?.icon && <div className="text-slate-300 transform scale-150">
-                                                        {/* Icon placeholder logic */}
-                                                    </div>}
-                                                </div>
-                                                <h3 className="text-lg font-bold text-slate-800 mb-2">{activeTab} View</h3>
-                                                <p className="text-slate-500">Data for {activeTab} will be displayed here based on the selected date range.</p>
-                                            </div>
-                                        )}
 
-                                    </div>
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={8} className="p-8 text-center text-slate-400">
+                                                    {loading ? "Fetching logs..." : "No transactions found for this date."}
+                                                </td>
+                                            </tr>
+                                        )
+                                        }
+                                    </tbody>
+                                </table>
                             </div>
-                            );
+                        </div>
+                    </div>
+                )}
+
+                {/* Placeholders for other tabs */}
+                {activeTab !== "Transaction" && (
+                    <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-slate-100">
+                        <div className="inline-flex justify-center items-center w-20 h-20 bg-slate-50 rounded-full mb-4">
+                            {tabs.find(t => t.id === activeTab)?.icon && <div className="text-slate-300 transform scale-150">
+                                {/* Icon placeholder logic */}
+                            </div>}
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">{activeTab} View</h3>
+                        <p className="text-slate-500">Data for {activeTab} will be displayed here based on the selected date range.</p>
+                    </div>
+                )}
+
+            </div>
+        </div>
+    );
 }
