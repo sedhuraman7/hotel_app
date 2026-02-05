@@ -49,17 +49,37 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                 const logs = await res.json();
 
                 // Map SQL Logs to UI format
-                const formattedLogs = logs.map((log: any) => ({
-                    id: log.id?.toString() || Math.random().toString(),
-                    type: log.type,
-                    category: log.type === 'RFID' || (log.type && log.type.includes('Guest')) ? 'Guest' : 'Employee',
-                    name: log.message || "Unknown User",
-                    position: "Room Access",
-                    cardId: log.cardId,
-                    deviceId: log.deviceId,
-                    access: log.access ? "Authorized" : "Denied",
-                    time: log.timestamp ? new Date(log.timestamp).toLocaleString() : new Date().toLocaleString()
-                }));
+                const formattedLogs = logs.map((log: any) => {
+                    let category = "Unknown";
+                    const typeLower = log.type?.toLowerCase() || "";
+                    const messageLower = log.message?.toLowerCase() || "";
+
+                    if (typeLower.includes("ble")) {
+                        category = "BLE";
+                    } else if (typeLower.includes("guest") || messageLower.includes("guest")) {
+                        category = "Guest";
+                    } else if (typeLower.includes("employee") || messageLower.includes("employee")) {
+                        category = "Employee";
+                    } else if (!log.access) {
+                        category = "Denied";
+                    } else {
+                        // Fallback for authorized RFID that isn't explicitly guest/employee (e.g. unknown card but somehow allowed?)
+                        // or if type is just "RFID"
+                        category = "Employee"; // Assuming standard RFID without guest tag might be staff
+                    }
+
+                    return {
+                        id: log.id?.toString() || Math.random().toString(),
+                        type: log.type,
+                        category: category,
+                        name: log.message || "Unknown User",
+                        position: log.deviceId ? `Room/Device: ${log.deviceId}` : "Room Access",
+                        cardId: log.cardId,
+                        deviceId: log.deviceId, // Store for UI
+                        access: log.access ? "Authorized" : "Denied",
+                        time: log.timestamp ? new Date(log.timestamp).toLocaleString() : new Date().toLocaleString()
+                    };
+                });
 
                 setTransactions(formattedLogs);
             } else {
@@ -146,28 +166,28 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                 {activeTab === "Transaction" && (
                     <div className="space-y-6">
                         {/* Stats Chips */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                             <div className="bg-purple-50 text-purple-700 p-4 rounded-xl flex items-center justify-between border border-purple-100">
-                                <span className="flex items-center gap-2 font-semibold"><User className="w-4 h-4" /> Employee Transactions</span>
+                                <span className="flex items-center gap-2 font-semibold"><User className="w-4 h-4" /> Employee</span>
                                 <span className="font-bold text-lg">{transactions.filter(t => t.category === "Employee").length}</span>
                             </div>
                             <div className="bg-blue-50 text-blue-700 p-4 rounded-xl flex items-center justify-between border border-blue-100">
-                                <span className="flex items-center gap-2 font-semibold"><UserCheck className="w-4 h-4" /> Guest Transactions</span>
+                                <span className="flex items-center gap-2 font-semibold"><UserCheck className="w-4 h-4" /> Guest</span>
                                 <span className="font-bold text-lg">{transactions.filter(t => t.category === "Guest").length}</span>
                             </div>
-                            <div className="bg-orange-50 text-orange-700 p-4 rounded-xl flex items-center justify-between border border-orange-100">
-                                <span className="flex items-center gap-2 font-semibold"><HelpCircle className="w-4 h-4" /> Other Events</span>
-                                <span className="font-bold text-lg">{transactions.filter(t => t.category === "Unknown").length}</span>
+                            <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl flex items-center justify-between border border-emerald-100">
+                                <span className="flex items-center gap-2 font-semibold"><History className="w-4 h-4" /> BLE</span>
+                                <span className="font-bold text-lg">{transactions.filter(t => t.category === "BLE").length}</span>
                             </div>
-                            <div className="bg-slate-100 text-slate-700 p-4 rounded-xl flex items-center justify-between border border-slate-200 sm:col-span-3">
-                                <span className="font-bold">Total</span>
-                                <span className="font-bold text-lg">{transactions.length}</span>
+                            <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center justify-between border border-red-100">
+                                <span className="flex items-center gap-2 font-semibold"><HelpCircle className="w-4 h-4" /> Denied/Other</span>
+                                <span className="font-bold text-lg">{transactions.filter(t => t.category === "Denied" || t.category === "Unknown").length}</span>
                             </div>
                         </div>
 
                         {/* Sub Tabs */}
                         <div className="flex gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
-                            {['All Transactions', 'Employee', 'Guest', 'Unknown'].map((tab) => (
+                            {['All Transactions', 'Employee', 'Guest', 'BLE', 'Denied'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveSubTab(tab)}
@@ -188,7 +208,7 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                                             <th className="p-4">Transaction ID</th>
                                             <th className="p-4">Type</th>
                                             <th className="p-4">Name</th>
-                                            <th className="p-4">Position/Details</th>
+                                            <th className="p-4">Room/Device</th>
                                             <th className="p-4">Card ID</th>
                                             <th className="p-4">Access Type</th>
                                             <th className="p-4 text-right">Date & Time</th>
@@ -197,14 +217,19 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                                     <tbody className="divide-y divide-slate-50">
                                         {transactions.filter(t => activeSubTab === 'All Transactions' || t.category === activeSubTab).length > 0 ? (
                                             transactions
-                                                .filter(t => activeSubTab === 'All Transactions' || t.category === activeSubTab)
+                                                .filter(t => activeSubTab === 'All Transactions' || t.category === activeSubTab) // Filter Denied not Unknown for tab
                                                 .map((txn, index) => (
                                                     <tr key={txn.id} className="hover:bg-slate-50/50">
                                                         <td className="p-4 text-sm text-slate-500">{index + 1}</td>
                                                         <td className="p-4 text-sm font-medium text-slate-700">{txn.id}</td>
-                                                        <td className="p-4 text-sm text-slate-600">{txn.type}</td>
+                                                        <td className="p-4 text-sm text-slate-600">
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${txn.type?.toLowerCase().includes('ble') ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'
+                                                                }`}>
+                                                                {txn.type}
+                                                            </span>
+                                                        </td>
                                                         <td className="p-4 text-sm text-slate-600">{txn.name}</td>
-                                                        <td className="p-4 text-sm text-slate-600">{txn.position}</td>
+                                                        <td className="p-4 text-sm text-slate-600 font-mono text-xs">{txn.position}</td>
                                                         <td className="p-4 text-sm font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded w-fit">{txn.cardId}</td>
                                                         <td className="p-4 text-sm">
                                                             <span className={`px-2 py-1 rounded text-xs font-bold ${txn.access === 'Exit' || txn.access === 'Removed' ? 'bg-orange-100 text-orange-700' :
@@ -214,38 +239,24 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                                                                 {txn.access}
                                                             </span>
                                                         </td>
-                                                        <td className="p-4 text-sm text-slate-500 text-right">{txn.time}</td>
+                                                        <td className="p-4 text-sm text-slate-500 text-right whitespace-nowrap">{txn.time}</td>
                                                     </tr>
                                                 ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan={8} className="p-8 text-center text-slate-400">
-                                                    {loading ? "Fetching logs..." : "No transactions found for this date."}
-                                                </td>
-                                            </tr>
-                                        )
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Placeholders for other tabs */}
-                {activeTab !== "Transaction" && (
-                    <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-slate-100">
-                        <div className="inline-flex justify-center items-center w-20 h-20 bg-slate-50 rounded-full mb-4">
-                            {tabs.find(t => t.id === activeTab)?.icon && <div className="text-slate-300 transform scale-150">
-                                {/* Icon placeholder logic */}
-                            </div>}
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-2">{activeTab} View</h3>
-                        <p className="text-slate-500">Data for {activeTab} will be displayed here based on the selected date range.</p>
-                    </div>
-                )}
+                                        {activeTab !== "Transaction" && (
+                                            <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-slate-100">
+                                                <div className="inline-flex justify-center items-center w-20 h-20 bg-slate-50 rounded-full mb-4">
+                                                    {tabs.find(t => t.id === activeTab)?.icon && <div className="text-slate-300 transform scale-150">
+                                                        {/* Icon placeholder logic */}
+                                                    </div>}
+                                                </div>
+                                                <h3 className="text-lg font-bold text-slate-800 mb-2">{activeTab} View</h3>
+                                                <p className="text-slate-500">Data for {activeTab} will be displayed here based on the selected date range.</p>
+                                            </div>
+                                        )}
 
-            </div>
-        </div>
-    );
+                                    </div>
+                            </div>
+                            );
 }
