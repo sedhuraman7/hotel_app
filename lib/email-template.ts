@@ -1,6 +1,6 @@
 
 // Helper to generate the Premium HTML Email
-export const generateEmailHtml = (title: string, hotelName: string, content: string, wifiSsid?: string, wifiPass?: string) => {
+export const generateEmailHtml = (title: string, hotelName: string, content: string, wifiSsid?: string, wifiPass?: string, webAppLink?: string) => {
 
     let wifiSection = "";
     if (wifiSsid && wifiPass) {
@@ -15,6 +15,17 @@ export const generateEmailHtml = (title: string, hotelName: string, content: str
              </div>
              <p style="color: #ccc; margin-top: 15px;">Network: <b style="color: #fff;">${wifiSsid}</b></p>
              <p style="color: #ccc;">Password: <b style="color: #fff;">${wifiPass}</b></p>
+        </div>
+        `;
+    }
+
+    let webAppSection = "";
+    if (webAppLink) {
+        webAppSection = `
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #333;">
+             <h3 style="color: #FFD700;">🛎️ Guest Services</h3>
+             <p style="color: #ccc; margin-bottom: 20px;">Use our web app to order food, view your bill, and rate your stay.</p>
+             <a href="${webAppLink}" style="background-color: #FFD700; color: #1a1a2e; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">Open Guest App</a>
         </div>
         `;
     }
@@ -38,6 +49,7 @@ export const generateEmailHtml = (title: string, hotelName: string, content: str
             <div style="padding: 30px;">
                 ${content}
                 ${wifiSection}
+                ${webAppSection}
                 
                 <p style="margin-top: 40px; color: #a0a0a0; font-size: 14px;">Enjoy your stay!</p>
             </div>

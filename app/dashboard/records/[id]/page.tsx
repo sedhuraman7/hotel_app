@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import {
     UserCheck,
     MessageSquare,
@@ -21,6 +21,10 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
     const [activeTab, setActiveTab] = useState("Transaction");
     const [dateRange, setDateRange] = useState({ start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] });
     const [transactions, setTransactions] = useState<any[]>([]);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [feedbacks, setFeedbacks] = useState<any[]>([]);
+    const [complaints, setComplaints] = useState<any[]>([]);
+    const [guestDetails, setGuestDetails] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [activeSubTab, setActiveSubTab] = useState('All Transactions');
 
@@ -92,6 +96,104 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
         }
     };
 
+    const fetchOrders = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/restaurant/order?guestId=${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setOrders(data);
+            }
+        } catch (error) {
+            console.error("Error fetching orders:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchFeedback = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/feedback?guestId=${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setFeedbacks(data);
+            }
+        } catch (error) {
+            console.error("Error fetching feedback:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchComplaints = async () => {
+        setLoading(true);
+        console.log(`Fetching complaints for guestId: ${id}`);
+        try {
+            const res = await fetch(`/api/complaints?guestId=${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                console.log("Complaints data:", data);
+                setComplaints(data);
+            }
+        } catch (error) {
+            console.error("Error fetching complaints:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchGuestDetails = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/guests');
+            if (res.ok) {
+                const data = await res.json();
+                const guest = data.find((g: any) => g.id === id);
+                setGuestDetails(guest);
+            }
+        } catch (error) {
+            console.error("Error fetching guest details:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateComplaintStatus = async (complaintId: string, status: string) => {
+        try {
+            await fetch('/api/complaints', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: complaintId, status })
+            });
+            fetchComplaints();
+        } catch (error) {
+            console.error("Failed to update status", error);
+        }
+    };
+
+    // simplified polling or effect
+    const loadData = () => {
+        if (activeTab === "Transaction") fetchTransactions();
+        if (activeTab === "Restaurant") fetchOrders();
+        if (activeTab === "Star Rating") fetchFeedback();
+        if (activeTab === "Total Complaints") fetchComplaints();
+        if (activeTab === "Guest Checkin") fetchGuestDetails();
+    };
+
+    useEffect(() => {
+        loadData();
+    }, [activeTab]);
+
+    // Poll every 5s if on tracking tabs
+    useEffect(() => {
+        if (activeTab === "Total Complaints" || activeTab === "Restaurant") {
+            const interval = setInterval(loadData, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [activeTab]);
+
+
     return (
         <div className="flex flex-col md:flex-row gap-6 min-h-[80vh]">
 
@@ -151,12 +253,12 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div className="sm:pb-1">
                             <button
-                                onClick={fetchTransactions}
+                                onClick={loadData}
                                 disabled={loading}
                                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium text-sm shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
                             >
                                 <Search className="w-4 h-4" />
-                                {loading ? "Loading..." : "Get Transactions"}
+                                {loading ? "Loading..." : "Get Data"}
                             </button>
                         </div>
                     </div>
@@ -259,13 +361,161 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                     </div>
                 )}
 
+                {/* Star Rating View */}
+                {activeTab === "Star Rating" && (
+                    <div className="space-y-4">
+                        {feedbacks.length > 0 ? (
+                            feedbacks.map((fb: any) => (
+                                <div key={fb.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="flex">
+                                            {[1, 2, 3, 4, 5].map(star => (
+                                                <Star key={star} className={`w-5 h-5 ${star <= fb.rating ? 'text-yellow-400 fill-current' : 'text-gray-200'}`} />
+                                            ))}
+                                        </div>
+                                        <span className="text-sm text-slate-500 ml-2">{new Date(fb.createdAt).toLocaleString()}</span>
+                                    </div>
+                                    <p className="text-slate-700">{fb.comment || "No comment provided."}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center p-8 text-slate-500 bg-white rounded-xl border border-slate-100">No ratings yet.</div>
+                        )}
+                    </div>
+                )}
+
+                {/* Restaurant View */}
+                {activeTab === "Restaurant" && (
+                    <div className="space-y-4">
+                        {orders.length > 0 ? (
+                            orders.map((order: any) => (
+                                <div key={order.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                                    <div className="flex justify-between items-start mb-4 border-b border-slate-100 pb-2">
+                                        <div>
+                                            <div className="font-bold text-slate-800">Order #{order.id.slice(0, 8)}</div>
+                                            <div className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleString()}</div>
+                                        </div>
+                                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                                            order.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                                'bg-slate-100 text-slate-600'
+                                            }`}>
+                                            {order.status}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 mb-4">
+                                        {order.items.map((item: any) => (
+                                            <div key={item.id} className="flex justify-between text-sm">
+                                                <span>{item.menuItem.name} x {item.quantity}</span>
+                                                <span className="font-mono">₹{item.price * item.quantity}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex justify-between font-bold pt-2 border-t border-slate-100">
+                                        <span>Total</span>
+                                        <span>₹{order.totalAmount}</span>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center p-8 text-slate-500 bg-white rounded-xl border border-slate-100">No orders placed.</div>
+                        )}
+                    </div>
+                )}
+
+                {/* Total Complaints View */}
+                {activeTab === "Total Complaints" && (
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-slate-800">Complaints Log</h2>
+                            <button onClick={fetchComplaints} className="text-sm text-blue-600 hover:text-blue-800 underline">Refresh</button>
+                        </div>
+                        {complaints.length > 0 ? (
+                            complaints.map((comp: any) => (
+                                <div key={comp.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex justify-between items-start">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="font-bold text-slate-800">{comp.type}</span>
+                                            <span className="text-xs text-slate-500">{new Date(comp.createdAt).toLocaleString()}</span>
+                                        </div>
+                                        <div className="text-xs text-slate-400 mb-1">
+                                            Guest: {comp.guest?.name} {comp.guest?.customer?.email ? `(${comp.guest.customer.email})` : <span className="text-red-500 font-bold">(No Email)</span>}
+                                        </div>
+                                        <p className="text-slate-600">{comp.description}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${comp.status === 'Open' ? 'bg-red-100 text-red-700' :
+                                            comp.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
+                                                comp.status === 'Resolved' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-green-100 text-green-700'
+                                            }`}>
+                                            {comp.status}
+                                        </span>
+                                        {comp.status !== 'Closed' && comp.status !== 'Resolved' && (
+                                            <div className="flex gap-2">
+                                                {comp.status === 'Open' && (
+                                                    <button
+                                                        onClick={() => updateComplaintStatus(comp.id, 'In Progress')}
+                                                        className="text-xs bg-yellow-50 text-yellow-600 px-2 py-1 rounded border border-yellow-200 hover:bg-yellow-100"
+                                                    >
+                                                        Mark In Progress
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => updateComplaintStatus(comp.id, 'Resolved')}
+                                                    className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100"
+                                                >
+                                                    Mark Resolved & Verify
+                                                </button>
+                                            </div>
+                                        )}
+                                        {comp.status === 'Resolved' && (
+                                            <span className="text-xs text-slate-400 italic">Waiting for Guest...</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center p-8 text-slate-500 bg-white rounded-xl border border-slate-100">No complaints found.</div>
+                        )}
+                    </div>
+                )}
+
+                {/* Guest Checkin View */}
+                {activeTab === "Guest Checkin" && (
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                        {guestDetails ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Guest Profile</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between"><span className="text-slate-500">Name</span> <span className="font-medium">{guestDetails.name}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-500">Phone</span> <span className="font-medium">{guestDetails.phone || 'N/A'}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-500">Email</span> <span className="font-medium">{guestDetails.email || 'N/A'}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-500">Loyalty Points</span> <span className="font-medium text-yellow-600">{guestDetails.customer?.points || 0} pts</span></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Stay Details</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between"><span className="text-slate-500">Room</span> <span className="font-medium bg-slate-100 px-2 rounded">{guestDetails.room?.id}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-500">Check In</span> <span className="font-medium">{new Date(guestDetails.checkInTime).toLocaleString()}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-500">Status</span> <span className="font-medium text-green-600">{guestDetails.status}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-500">Payment Status</span> <span className={`font-medium ${guestDetails.paymentStatus === 'Paid' ? 'text-green-600' : 'text-red-600'}`}>{guestDetails.paymentStatus}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center text-slate-500">Loading guest details...</div>
+                        )}
+                    </div>
+                )}
+
                 {/* Placeholders for other tabs */}
-                {activeTab !== "Transaction" && (
+                {activeTab !== "Transaction" && activeTab !== "Star Rating" && activeTab !== "Restaurant" && activeTab !== "Total Complaints" && activeTab !== "Guest Checkin" && (
                     <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-slate-100">
                         <div className="inline-flex justify-center items-center w-20 h-20 bg-slate-50 rounded-full mb-4">
-                            {tabs.find(t => t.id === activeTab)?.icon && <div className="text-slate-300 transform scale-150">
-                                {/* Icon placeholder logic */}
-                            </div>}
+                            {/* Icon placeholder logic */}
+                            <HelpCircle className="w-10 h-10 text-slate-300" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 mb-2">{activeTab} View</h3>
                         <p className="text-slate-500">Data for {activeTab} will be displayed here based on the selected date range.</p>

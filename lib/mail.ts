@@ -22,6 +22,8 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
             console.error("Failed to manual load .env", e);
         }
 
+        console.log(`[Mail] Attempting to send email from ${user} to ${to}`);
+
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -39,8 +41,8 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
             html
         };
 
-        await transporter.sendMail(mailOptions);
-        console.log("Email sent to:", to);
+        const result = await transporter.sendMail(mailOptions);
+        console.log("Email sent successfully. MessageID:", result.messageId);
     } catch (error) {
         console.error("Email send failed:", error);
     }

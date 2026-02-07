@@ -98,7 +98,10 @@ export async function POST(req: NextRequest) {
                     </div>
                  `;
 
-                const html = generateEmailHtml(`Welcome, ${name}!`, hotelName, content, wifiSsid, wifiPass);
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+                const webAppLink = `${appUrl}/guest/${guest.id}`;
+
+                const html = generateEmailHtml(`Welcome, ${name}!`, hotelName, content, wifiSsid, wifiPass, webAppLink);
 
                 await sendEmail(mailTo, `Welcome to ${hotelName}!`, html);
             }
@@ -117,7 +120,14 @@ export async function GET(req: NextRequest) {
     try {
         const guests = await prisma.guest.findMany({
             orderBy: { checkInTime: 'desc' },
-            include: { room: true }
+            include: {
+                room: true,
+                complaints: {
+                    where: {
+                        status: { not: 'Resolved' }
+                    }
+                }
+            }
         });
         return NextResponse.json(guests);
     } catch (error) {

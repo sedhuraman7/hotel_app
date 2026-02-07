@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Utensils, ChefHat, Coffee, ShoppingCart, Plus, X, Search, Clock, CheckCircle, Truck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -16,14 +16,54 @@ const MENU_ITEMS = [
     { id: 8, name: "Gulab Jamun", price: 100, category: "Dessert" },
 ];
 
-const INITIAL_ORDERS = [
-    { id: 101, room: "101", items: [{ name: "Chicken Biryani", qty: 2 }], total: 700, status: "Preparing", time: "10 mins ago" },
-    { id: 102, room: "202", items: [{ name: "Cold Coffee", qty: 1 }], total: 150, status: "Delivering", time: "5 mins ago" },
-];
+const INITIAL_ORDERS: any[] = [];
 
 export default function RestaurantPage() {
-    const [orders, setOrders] = useState(INITIAL_ORDERS);
+    const [orders, setOrders] = useState<any[]>([]);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [selectedOrderForDelivery, setSelectedOrderForDelivery] = useState<string | null>(null);
+    const [deliveryMen, setDeliveryMen] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Initial Fetch & Polling
+    useEffect(() => {
+        fetchOrders(); // Initial load
+        fetchDeliveryMen();
+
+        const interval = setInterval(() => {
+            fetchOrders(); // Poll every 10 seconds
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const fetchOrders = async () => {
+        try {
+            const res = await fetch('/api/restaurant/order'); // Need to ensure GET /api/restaurant/order returns all for admin
+            if (res.ok) {
+                const data = await res.json();
+                setOrders(data);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchDeliveryMen = async () => {
+        // Mocking for now or fetch from /api/employees if endpoint exists with role filter
+        // Assuming we can fetch all and filter client side
+        try {
+            const res = await fetch('/api/employees');
+            if (res.ok) {
+                const data = await res.json();
+                setDeliveryMen(data.filter((e: any) => e.role === 'Delivery' || e.role === 'Staff')); // Adjust roles as needed
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
 
     // --- Stats ---
     const activeOrders = orders.filter(o => o.status !== "Delivered").length;
@@ -66,9 +106,46 @@ export default function RestaurantPage() {
         setIsOrderModalOpen(false);
     };
 
-    const updateStatus = (orderId: number, newStatus: string) => {
-        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    const updateStatus = async (orderId: string, newStatus: string) => {
+        try {
+            const res = await fetch('/api/restaurant/order', {
+                method: 'PATCH', // Need to implement PATCH in route
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: orderId, status: newStatus })
+            });
+            if (res.ok) {
+                fetchOrders();
+            }
+        } catch (e) {
+            console.error(e);
+        }
     };
+
+    const assignDelivery = async (employeeId: string) => {
+        if (!selectedOrderForDelivery) return;
+        try {
+            const res = await fetch('/api/restaurant/order', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: selectedOrderForDelivery, status: 'delivering', deliveryManId: employeeId }) // Assuming status 'delivering' means assigned
+            });
+            if (res.ok) {
+                setIsAssignModalOpen(false);
+                setSelectedOrderForDelivery(null);
+                fetchOrders();
+                // Notification simulation
+                alert(`Order Assigned to ${deliveryMen.find(d => d.id === employeeId)?.name}! Notification sent.`);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const openAssignModal = (orderId: string) => {
+        setSelectedOrderForDelivery(orderId);
+        setIsAssignModalOpen(true);
+    };
+
 
     return (
         <div className="space-y-6">
@@ -118,30 +195,59 @@ export default function RestaurantPage() {
             </div>
 
             {/* Orders Board */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                {/* Preparing */}
+                {/* Pending */}
                 <div className="space-y-4">
                     <h3 className="font-semibold text-slate-600 flex items-center gap-2">
-                        <Clock className="w-4 h-4" /> Preparing
+                        <Clock className="w-4 h-4" /> Pending
                     </h3>
-                    {orders.filter(o => o.status === "Preparing").map(order => (
+                    {orders.filter(o => o.status === "Pending").map(order => (
                         <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <div className="flex justify-between items-start mb-3">
-                                <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">Room {order.room}</span>
-                                <span className="text-xs text-slate-400">{order.time}</span>
+                                <span className="text-xs font-bold bg-gray-100 text-gray-700 px-2 py-1 rounded">Room {order.guest?.room?.id || 'N/A'}</span>
+                                <span className="text-xs text-slate-400">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                             <div className="space-y-1 mb-3">
-                                {order.items.map((item, i) => (
-                                    <p key={i} className="text-sm text-slate-700 flex justify-between">
-                                        <span>{item.name}</span>
-                                        <span className="font-medium text-slate-500">x{item.qty}</span>
+                                {order.items?.map((item: any) => (
+                                    <p key={item.id} className="text-sm text-slate-700 flex justify-between">
+                                        <span>{item.menuItem?.name}</span>
+                                        <span className="font-medium text-slate-500">x{item.quantity}</span>
                                     </p>
                                 ))}
                             </div>
                             <div className="pt-3 border-t border-dashed border-slate-200 flex justify-between items-center">
-                                <span className="font-bold text-slate-800">₹{order.total}</span>
-                                <button onClick={() => updateStatus(order.id, "Delivering")} className="text-xs font-medium text-blue-600 hover:text-blue-800">
+                                <span className="font-bold text-slate-800">₹{order.totalAmount}</span>
+                                <button onClick={() => updateStatus(order.id, "Preparing")} className="text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded">
+                                    Start Preparing &rarr;
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Preparing */}
+                <div className="space-y-4">
+                    <h3 className="font-semibold text-slate-600 flex items-center gap-2">
+                        <ChefHat className="w-4 h-4" /> Preparing
+                    </h3>
+                    {orders.filter(o => o.status === "Preparing").map(order => (
+                        <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-orange-400">
+                            <div className="flex justify-between items-start mb-3">
+                                <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded">Room {order.guest?.room?.id || 'N/A'}</span>
+                                <span className="text-xs text-slate-400">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className="space-y-1 mb-3">
+                                {order.items?.map((item: any) => (
+                                    <p key={item.id} className="text-sm text-slate-700 flex justify-between">
+                                        <span>{item.menuItem?.name}</span>
+                                        <span className="font-medium text-slate-500">x{item.quantity}</span>
+                                    </p>
+                                ))}
+                            </div>
+                            <div className="pt-3 border-t border-dashed border-slate-200 flex justify-between items-center">
+                                <span className="font-bold text-slate-800">₹{order.totalAmount}</span>
+                                <button onClick={() => updateStatus(order.id, "Ready")} className="text-xs font-medium text-blue-600 hover:text-blue-800">
                                     Mark Ready &rarr;
                                 </button>
                             </div>
@@ -149,54 +255,94 @@ export default function RestaurantPage() {
                     ))}
                 </div>
 
-                {/* Delivering */}
+                {/* Ready / Assign Delivery */}
                 <div className="space-y-4">
                     <h3 className="font-semibold text-slate-600 flex items-center gap-2">
-                        <Truck className="w-4 h-4" /> Delivering
+                        <Truck className="w-4 h-4" /> Ready for Delivery
                     </h3>
-                    {orders.filter(o => o.status === "Delivering").map(order => (
-                        <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-yellow-400">
+                    {orders.filter(o => o.status === "Ready" || o.status === "Delivering").map(order => (
+                        <div key={order.id} className={`bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 ${order.status === 'delivering' ? 'border-l-yellow-400' : 'border-l-blue-400'}`}>
                             <div className="flex justify-between items-start mb-3">
-                                <span className="text-xs font-bold bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Room {order.room}</span>
-                                <span className="text-xs text-slate-400">{order.time}</span>
+                                <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">Room {order.guest?.room?.id || 'N/A'}</span>
+                                {order.deliveryMan && <span className="text-[10px] bg-black text-white px-1.5 py-0.5 rounded">{order.deliveryMan.name}</span>}
                             </div>
                             <div className="space-y-1 mb-3">
-                                {order.items.map((item, i) => (
-                                    <p key={i} className="text-sm text-slate-700 flex justify-between">
-                                        <span>{item.name}</span>
-                                        <span className="font-medium text-slate-500">x{item.qty}</span>
-                                    </p>
-                                ))}
+                                <div className="text-xs text-slate-500 mb-1">Status: {order.status}</div>
                             </div>
-                            <div className="pt-3 border-t border-dashed border-slate-200 flex justify-between items-center">
-                                <span className="font-bold text-slate-800">₹{order.total}</span>
-                                <button onClick={() => updateStatus(order.id, "Delivered")} className="text-xs font-medium text-green-600 hover:text-green-800">
-                                    Mark Delivered &rarr;
-                                </button>
+                            <div className="pt-3 border-t border-dashed border-slate-200 flex flex-col gap-2">
+                                <div className="flex justify-between font-bold text-slate-800">
+                                    <span>Total</span>
+                                    <span>₹{order.totalAmount}</span>
+                                </div>
+
+                                {order.status !== 'Relivering' && !order.deliveryManId ? (
+                                    <button onClick={() => openAssignModal(order.id)} className="w-full py-1.5 bg-slate-800 text-white text-xs rounded hover:bg-slate-700">
+                                        Assign Delivery Man
+                                    </button>
+                                ) : (
+                                    <button onClick={() => updateStatus(order.id, "Delivered")} className="w-full py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700">
+                                        Mark Delivered
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}
                 </div>
 
-                {/* Delivered */}
+                {/* Completed */}
                 <div className="space-y-4">
                     <h3 className="font-semibold text-slate-600 flex items-center gap-2">
                         <CheckCircle className="w-4 h-4" /> Completed
                     </h3>
-                    {orders.filter(o => o.status === "Delivered").map(order => (
+                    {orders.filter(o => o.status === "Delivered" || o.status === "Completed").map(order => (
                         <div key={order.id} className="bg-white/60 p-4 rounded-xl border border-slate-100 opacity-75 hover:opacity-100 transition-opacity">
                             <div className="flex justify-between items-start mb-3">
-                                <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Room {order.room}</span>
-                                <span className="text-xs font-medium text-green-600">Paid & Delivered</span>
+                                <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Room {order.guest?.room?.id || 'N/A'}</span>
+                                <span className="text-xs font-medium text-green-600">Delivered</span>
                             </div>
                             <div className="pt-1 border-t border-slate-100 flex justify-between items-center">
-                                <span className="text-xs text-slate-500">{order.items.length} Items</span>
-                                <span className="font-bold text-slate-700">₹{order.total}</span>
+                                <span className="text-xs text-slate-500">{order.items?.length || 0} Items</span>
+                                <span className="font-bold text-slate-700">₹{order.totalAmount}</span>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
+
+            {/* Assign Modal */}
+            <AnimatePresence>
+                {isAssignModalOpen && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAssignModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative bg-white w-full max-w-sm rounded-2xl shadow-xl p-6">
+                            <h3 className="text-lg font-bold mb-4">Assign Delivery Man</h3>
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {deliveryMen.map(man => (
+                                    <button
+                                        key={man.id}
+                                        onClick={() => assignDelivery(man.id)}
+                                        className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-blue-100 group transition-all"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 font-bold text-xs">
+                                                {man.name.substring(0, 2).toUpperCase()}
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="font-medium text-slate-700">{man.name}</div>
+                                                <div className="text-xs text-slate-500">{man.role}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-blue-600 opacity-0 group-hover:opacity-100 text-xs font-bold">Select</div>
+                                    </button>
+                                ))}
+                                {deliveryMen.length === 0 && <div className="text-center text-slate-400 py-4">No delivery staff found.</div>}
+                            </div>
+                            <button onClick={() => setIsAssignModalOpen(false)} className="mt-4 w-full py-2 text-slate-500 hover:text-slate-800 text-sm">Cancel</button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
 
             {/* New Order Modal */}
             <AnimatePresence>

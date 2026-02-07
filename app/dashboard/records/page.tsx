@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Plus, Edit, FileText, ArrowRightLeft, History, DoorClosed } from "lucide-react";
+import { ArrowLeft, Plus, Edit, FileText, ArrowRightLeft, History, DoorClosed, AlertTriangle } from "lucide-react";
 import CheckInModal from "@/components/CheckInModal";
 import TransferModal from "@/components/TransferModal";
 import InvoiceModal from "@/components/InvoiceModal";
@@ -36,7 +36,8 @@ export default function RoomRecordsPage() {
                     checkOutDate: guest.checkOutTime ? new Date(guest.checkOutTime).toLocaleString() : "-",
                     stayLength: guest.stayLength + " days",
                     totalAmount: guest.totalAmount,
-                    status: guest.status
+                    status: guest.status,
+                    activeComplaints: guest.complaints ? guest.complaints.length : 0
                 }));
                 setRecords(formatted);
             }
@@ -185,7 +186,16 @@ export default function RoomRecordsPage() {
                             {records.map((record) => (
                                 <tr key={record.id} className="hover:bg-slate-50/80 transition-colors">
                                     <td className="p-4 text-sm font-medium text-slate-700">{record.guestName}</td>
-                                    <td className="p-4 text-sm text-slate-600">{record.roomNumber}</td>
+                                    <td className="p-4 text-sm text-slate-600">
+                                        <div className="flex items-center gap-2">
+                                            {record.roomNumber}
+                                            {record.activeComplaints > 0 && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 animate-pulse border border-red-200" title={`${record.activeComplaints} Active Issue(s)`}>
+                                                    <AlertTriangle className="w-3 h-3" /> {record.activeComplaints}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td className="p-4 text-sm text-slate-500 font-mono text-xs">{record.checkInTime}</td>
                                     <td className="p-4 text-sm text-slate-500 font-mono text-xs">{record.checkOutDate}</td>
                                     <td className="p-4 text-sm text-slate-600">{record.stayLength}</td>

@@ -47,6 +47,9 @@ model Guest {
   currentRoomId String? @unique
 
   transactions Transaction[]
+  orders       Order[]
+  feedbacks    Feedback[]
+  complaints   Complaint[]
 
   // Loyalty Link
   customerId  String?
@@ -70,6 +73,8 @@ model Employee {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  deliveries  Order[]
 }
 
 // 4. Access Logs (RFID/BLE Tap History)
@@ -122,3 +127,75 @@ model Customer {
   updatedAt DateTime @updatedAt
 }
 
+// 8. Restaurant Menu
+model MenuItem {
+  id          String   @id @default(uuid())
+  name        String
+  category    String   // Main Course, Breads, Chinese, Soups, Beverages, Dessert
+  price       Float
+  description String?
+  isAvailable Boolean  @default(true)
+  imageUrl    String?
+
+  orderItems  OrderItem[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// 9. Orders
+model Order {
+  id          String   @id @default(uuid())
+  guestId     String
+  guest       Guest    @relation(fields: [guestId], references: [id])
+  
+  items       OrderItem[] // Relation to OrderItem
+  
+  totalAmount Float
+  status      String   @default("Pending") // Pending, Preparing, Ready, Delivered, Cancelled
+  
+  deliveryManId String?
+  deliveryMan   Employee? @relation(fields: [deliveryManId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id])
+  
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  
+  quantity   Int
+  price      Float    // Price at the time of order
+}
+
+// 10. Guest Feedback
+model Feedback {
+  id        String   @id @default(uuid())
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id])
+  
+  rating    Int      // 1-5 Stars
+  comment   String?
+  
+  createdAt DateTime @default(now())
+}
+
+// 11. Guest Complaints / Service Requests
+model Complaint {
+  id          String   @id @default(uuid())
+  guestId     String
+  guest       Guest    @relation(fields: [guestId], references: [id])
+  
+  type        String   // Room Service, Cleaning, Maintenance, Noise, Other
+  description String
+  status      String   @default("Open") // Open, In Progress, Resolved
+  resolution  String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

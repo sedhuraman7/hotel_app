@@ -124,6 +124,8 @@ export default function AddEmployeeModal({ isOpen, onClose, onSubmit }: AddEmplo
                                             <option value="Housekeeping">Housekeeping</option>
                                             <option value="Chef">Chef</option>
                                             <option value="Security">Security</option>
+                                            <option value="Delivery">Delivery</option>
+                                            <option value="Staff">Staff</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">
