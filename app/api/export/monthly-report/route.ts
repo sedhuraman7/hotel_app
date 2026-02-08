@@ -42,7 +42,8 @@ export async function POST(req: Request) {
             { header: 'Stay Length (Days)', key: 'stay', width: 15 },
             { header: 'Total Amount', key: 'amount', width: 15 },
             { header: 'Payment Status', key: 'status', width: 15 },
-            { header: 'ID Proof (Aadhar)', key: 'aadhar', width: 20 }, // Assuming field exists or just generic logic
+            { header: 'Payment Method', key: 'method', width: 15 }, // New Column
+            { header: 'ID Proof (Aadhar)', key: 'aadhar', width: 20 },
         ];
 
         // Add Data
@@ -55,7 +56,8 @@ export async function POST(req: Request) {
                 stay: guest.stayLength,
                 amount: guest.totalAmount,
                 status: guest.paymentStatus,
-                aadhar: 'N/A' // Schema doesn't have aadhar explicitly shown in previous view but logic usually implies it. 
+                method: guest.paymentMethod || 'N/A', // New Data
+                aadhar: 'N/A'
             });
         });
 

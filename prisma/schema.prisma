@@ -36,6 +36,7 @@ model Guest {
   // Payment
   totalAmount  Float
   paymentStatus String  @default("Unpaid")
+  paymentMethod String? // Cash, UPI, Card
   status       String   @default("Checked In") // Checked In, Checked Out
   
   // Room Relation

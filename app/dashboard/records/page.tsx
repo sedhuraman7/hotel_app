@@ -36,6 +36,7 @@ export default function RoomRecordsPage() {
                     checkOutDate: guest.checkOutTime ? new Date(guest.checkOutTime).toLocaleString() : "-",
                     stayLength: guest.stayLength + " days",
                     totalAmount: guest.totalAmount,
+                    paymentStatus: guest.paymentStatus,
                     status: guest.status,
                     activeComplaints: guest.complaints ? guest.complaints.length : 0
                 }));
@@ -61,6 +62,7 @@ export default function RoomRecordsPage() {
             email: data.email,
             aadhar: data.aadhar,
             paymentStatus: data.paymentStatus,
+            paymentMethod: data.paymentMethod, // From Modal
             totalAmount: data.totalAmount
         };
 
@@ -79,16 +81,25 @@ export default function RoomRecordsPage() {
         }
     };
 
-    const handleCheckOut = async (guestId: string) => {
-        if (!confirm("Are you sure you want to check out this guest?")) return;
+    const handleCheckOut = async (guestId: string, paymentStatus: string, totalAmount: number) => {
+        if (paymentStatus === 'Unpaid') {
+            const confirmPayment = confirm(`⚠️ Payment Pending!\n\nTotal Amount: ₹${totalAmount}\n\nHas the guest paid by Cash or UPI? Click OK to confirm payment and checkout.`);
+            if (!confirmPayment) return;
+        } else {
+            if (!confirm("Are you sure you want to check out this guest?")) return;
+        }
 
         try {
-            const res = await fetch(`/api/guests/${guestId}`, { // We need to ensure this route exists or update how we route
-                // Since next.js app router usually uses dynamic routes like app/api/guests/[id]/route.ts
-                // I will verify that file exists or create it.
+            // If payment was unpaid, we assume it's now paid since they clicked OK
+            const payload = {
+                status: "Checked Out",
+                paymentStatus: "Paid" // Auto-update to Paid on checkout
+            };
+
+            const res = await fetch(`/api/guests/${guestId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "Checked Out" })
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
@@ -217,7 +228,7 @@ export default function RoomRecordsPage() {
                                         <div className="flex items-center justify-end gap-2">
                                             {record.status === 'Checked In' && (
                                                 <button
-                                                    onClick={() => handleCheckOut(record.id)}
+                                                    onClick={() => handleCheckOut(record.id, record.paymentStatus || 'Unpaid', record.totalAmount)}
                                                     className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                                                     title="Check Out Guest"
                                                 >

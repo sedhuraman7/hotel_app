@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { name, roomId, cardId, phone, email, paymentStatus, totalAmount } = body;
+        const { name, roomId, cardId, phone, email, paymentStatus, paymentMethod, totalAmount } = body;
 
         // 1. Check if Room is Vacant
         const room = await prisma.room.findUnique({ where: { id: roomId } });
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
                 roomId,
                 rfidCardId: cardId, // Optional
                 paymentStatus,
+                paymentMethod, // Store how they paid
                 totalAmount: parseFloat(totalAmount),
                 status: "Checked In",
                 currentRoomId: roomId, // Bind as active guest

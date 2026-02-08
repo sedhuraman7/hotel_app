@@ -36,6 +36,7 @@ export default function CheckInModal({ isOpen, onClose, onSubmit, initialData }:
         stayLength: 1,
         checkInTime: "",
         paymentStatus: "Unpaid",
+        paymentMethod: "Cash",
         status: "Checked In"
     };
 
@@ -230,6 +231,16 @@ export default function CheckInModal({ isOpen, onClose, onSubmit, initialData }:
                                             <option value="Partial">Partial</option>
                                         </select>
                                     </div>
+                                    {formData.paymentStatus === 'Paid' && (
+                                        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                                            <label className="text-xs font-semibold text-slate-600 uppercase">Payment Method</label>
+                                            <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none cursor-pointer">
+                                                <option value="Cash">Cash</option>
+                                                <option value="UPI">UPI</option>
+                                                <option value="Card">Card</option>
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
                             </section>
 
