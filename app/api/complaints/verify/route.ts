@@ -29,7 +29,7 @@ export async function GET(request: Request) {
             color = '#dc3545';
         }
 
-        await prisma.complaint.update({
+        const complaint = await prisma.complaint.update({
             where: { id: complaintId },
             data: { status: newStatus }
         });
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
                 <span class="icon">${icon}</span>
                 <h1 style="color: ${color}">${action === 'confirm' ? 'Case Closed' : 'Ticket Re-opened'}</h1>
                 <p>${message}</p>
-                <a href="/guest/${complaintId}" class="btn">Back to Dashboard</a>
+                <a href="/guest/${complaint.guestId}" class="btn">Back to Dashboard</a>
             </div>
         </body>
         </html>

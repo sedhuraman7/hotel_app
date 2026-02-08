@@ -76,8 +76,12 @@ export async function PATCH(request: Request) {
             console.log(`[Complaint] Sending resolution email to ${guestEmail}`);
             const { sendEmail } = await import('@/lib/mail');
 
-            const confirmLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/complaints/verify?id=${complaint.id}&action=confirm`;
-            const rejectLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/complaints/verify?id=${complaint.id}&action=reopen`;
+            const host = request.headers.get("host"); // e.g. "localhost:3001"
+            const protocol = request.headers.get("x-forwarded-proto") || "http";
+            const appUrl = `${protocol}://${host}`;
+
+            const confirmLink = `${appUrl}/api/complaints/verify?id=${complaint.id}&action=confirm`;
+            const rejectLink = `${appUrl}/api/complaints/verify?id=${complaint.id}&action=reopen`;
 
             const emailHtml = `
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">

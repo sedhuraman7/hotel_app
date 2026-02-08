@@ -66,6 +66,10 @@ export async function PATCH(request: Request) {
         if (deliveryManId && order.deliveryMan?.email) {
             const { sendEmail } = await import('@/lib/mail');
 
+            const host = request.headers.get("host");
+            const protocol = request.headers.get("x-forwarded-proto") || "http";
+            const appUrl = `${protocol}://${host}`;
+
             const emailHtml = `
             <div style="font-family: Arial, sans-serif; color: #333;">
                 <h2 style="color: #0056b3;">📦 New Delivery Assignment!</h2>
@@ -85,7 +89,7 @@ export async function PATCH(request: Request) {
 
                 <p>Please pick up the order from the kitchen and deliver it immediately.</p>
                 <br/>
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/restaurant/order/verify?id=${order.id}" 
+                <a href="${appUrl}/api/restaurant/order/verify?id=${order.id}" 
                    style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                    ✅ Click here to Confirm Delivery
                 </a>
