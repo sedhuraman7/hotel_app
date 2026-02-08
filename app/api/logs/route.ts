@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
 
     try {
         let whereCondition: any = {};
+        let orConditions: any[] = [];
 
         // 1. FILTER BY GUEST ID
         if (guestId) {
@@ -22,14 +23,20 @@ export async function GET(req: NextRequest) {
             });
 
             if (guest) {
-                // Priority: Fetch logs for the ROOM DEVICE (to see Employee, BLE, Guest, etc.)
+                // Combine Device ID matches AND Card ID matches
+
+                // a) Logs from their assigned Room Device (Guests + Staff entering their room)
                 if (guest.room && guest.room.deviceId) {
-                    whereCondition.deviceId = guest.room.deviceId;
+                    orConditions.push({ deviceId: guest.room.deviceId });
                 }
-                // Fallback: If no device assigned to room, just check for this user's card
-                else if (guest.rfidCardId) {
-                    whereCondition.cardId = guest.rfidCardId;
-                } else {
+
+                // b) Logs from their Card (Them entering their room OR other areas like Gym/Main Gate)
+                if (guest.rfidCardId) {
+                    orConditions.push({ cardId: guest.rfidCardId });
+                }
+
+                // If no device config and no card, we can't find logs
+                if (orConditions.length === 0) {
                     return NextResponse.json([]);
                 }
             } else {
@@ -38,21 +45,28 @@ export async function GET(req: NextRequest) {
         }
         // 2. FILTER BY ROOM ID
         else if (roomId) {
-            // Find Room to get Device ID
             const room = await prisma.room.findUnique({
                 where: { id: roomId },
                 include: { currentGuest: true }
             });
 
-            if (room && room.deviceId) {
-                // Fetch logs for this device
-                whereCondition.deviceId = room.deviceId;
-            } else if (room?.currentGuest?.rfidCardId) {
-                // Fallback: Fetch logs for current guest
-                whereCondition.cardId = room.currentGuest.rfidCardId;
+            if (room) {
+                if (room.deviceId) {
+                    orConditions.push({ deviceId: room.deviceId });
+                }
+                // Optional: Also show logs of the current guest? Maybe confusing. 
+                // Let's stick to Room Device logs for Room View.
+                else {
+                    return NextResponse.json([]);
+                }
             } else {
-                return NextResponse.json([]);
+                return NextResponse.json({ error: "Room not found" }, { status: 404 });
             }
+        }
+
+        // Apply OR conditions if they exist
+        if (orConditions.length > 0) {
+            whereCondition.OR = orConditions;
         }
 
         // 3. Date Range Filter
