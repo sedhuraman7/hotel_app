@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BedDouble, Wrench, Plus, Save, Settings, Wifi } from "lucide-react";
+import { BedDouble, Wrench, Plus, Save, Settings, Wifi, History } from "lucide-react";
 import AddRoomModal from "@/components/AddRoomModal";
+import RoomHistoryModal from "@/components/RoomHistoryModal";
 
 export default function RoomsAssetsPage() {
     const [rooms, setRooms] = useState<any[]>([]);
     const [editingRoom, setEditingRoom] = useState<string | null>(null);
+    const [historyRoomId, setHistoryRoomId] = useState<string | null>(null);
     const [tempDeviceId, setTempDeviceId] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -152,8 +154,17 @@ export default function RoomsAssetsPage() {
                             </div>
 
                             <div className="mt-4 pt-4 border-t border-slate-50 flex gap-2">
-                                <button className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 text-xs font-bold uppercase hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors">
+                                <button
+                                    onClick={() => handleEdit(room)}
+                                    className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 text-xs font-bold uppercase hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors"
+                                >
                                     <Wrench className="w-3 h-3" /> Config
+                                </button>
+                                <button
+                                    onClick={() => setHistoryRoomId(room.id)}
+                                    className="flex-1 py-3 border border-slate-200 rounded-xl text-blue-600 text-xs font-bold uppercase hover:bg-blue-50 flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    <History className="w-3 h-3" /> History
                                 </button>
                             </div>
                         </div>
@@ -166,6 +177,14 @@ export default function RoomsAssetsPage() {
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleAddRoom}
             />
+
+            {historyRoomId && (
+                <RoomHistoryModal
+                    roomId={historyRoomId}
+                    isOpen={!!historyRoomId}
+                    onClose={() => setHistoryRoomId(null)}
+                />
+            )}
         </div>
     );
 }
