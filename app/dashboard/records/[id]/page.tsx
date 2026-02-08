@@ -38,19 +38,17 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
     ];
 
     const fetchTransactions = async () => {
-        // if (!dateRange.start || !dateRange.end) return; // Allow fetching without date logic if API handles defaults, but API logic expects ranges if provided.
-        // Actually for filtered view, logging specific guest history is better without strict date restrictions initially?
-        // Let's keep existing logic.
-
         setLoading(true);
         setTransactions([]);
 
         try {
             // Fetch Logs from SQL API using guestId (which is passed as 'id' in params)
+            console.log(`Fetching logs for Guest ID: ${id}`);
             const res = await fetch(`/api/logs?guestId=${id}&start=${dateRange.start}&end=${dateRange.end}`);
 
             if (res.ok) {
                 const logs = await res.json();
+                console.log("Raw Logs:", logs);
 
                 // Map SQL Logs to UI format
                 const formattedLogs = logs.map((log: any) => {
@@ -67,9 +65,12 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
                     } else if (!log.access) {
                         category = "Denied";
                     } else {
-                        // Fallback for authorized RFID that isn't explicitly guest/employee (e.g. unknown card but somehow allowed?)
-                        // or if type is just "RFID"
-                        category = "Employee"; // Assuming standard RFID without guest tag might be staff
+                        // If authorized but not explicitly guest, assume employee (staff card)
+                        if (log.access) {
+                            category = "Employee";
+                        } else {
+                            category = "Denied";
+                        }
                     }
 
                     return {
@@ -87,6 +88,7 @@ export default function RoomDetailsPage({ params }: { params: Promise<{ id: stri
 
                 setTransactions(formattedLogs);
             } else {
+                console.error("Failed to fetch logs");
                 setTransactions([]);
             }
         } catch (error) {
