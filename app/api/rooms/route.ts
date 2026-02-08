@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json(); // { id, type, deviceId }
 
-        // Validation: Check if Room ID exists
         const exists = await prisma.room.findUnique({ where: { id: body.id } });
         if (exists) {
             return NextResponse.json({ error: "Room ID already exists" }, { status: 400 });
@@ -35,7 +34,6 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(room);
     } catch (error) {
-        console.error("Add Room Error:", error);
         return NextResponse.json({ error: "Failed to add room" }, { status: 500 });
     }
 }

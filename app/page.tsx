@@ -50,12 +50,7 @@ export default function LoginPage() {
       }
 
       // Success
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("hotelName", data.hotelName || hotelName || "My Hotel");
-        localStorage.setItem("hotelEmail", data.email);
-      }
       router.push("/dashboard");
-
     } catch (err: any) {
       setError(err.message);
     } finally {

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
             where: { id: guestId },
             data: {
                 currentRoomId: newRoomId,
-                roomId: newRoomId // Update main room link too depending on logic, or just track current
+                roomId: newRoomId
             }
         });
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
             const { sendEmail } = require("@/lib/mail");
             const { generateEmailHtml } = require("@/lib/email-template");
 
-            const admin = await prisma.user.findFirst({ orderBy: { createdAt: 'desc' } });
+            const admin = await prisma.user.findFirst();
             const hotelName = admin?.hotelName || "Luxury Hotel";
 
             const content = `

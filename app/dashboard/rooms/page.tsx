@@ -55,17 +55,22 @@ export default function RoomsAssetsPage() {
             deviceId: data.deviceId
         };
 
-        // API Call
-        const res = await fetch("/api/rooms", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+        try {
+            const res = await fetch("/api/rooms", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
 
-        if (res.ok) {
-            fetchRooms(); // Refresh list
-        } else {
-            alert("Failed to add room. ID might exist.");
+            if (res.ok) {
+                fetchRooms(); // Refresh list
+            } else {
+                const errorData = await res.json();
+                alert(`Failed to add room: ${errorData.error || "Unknown error"}`);
+            }
+        } catch (error) {
+            console.error("Room addition error:", error);
+            alert("Connection error. Please try again.");
         }
     };
 

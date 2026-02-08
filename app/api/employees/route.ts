@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 
 // GET: List all employees
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         const employees = await prisma.employee.findMany({
             orderBy: { createdAt: 'desc' }
@@ -17,35 +17,36 @@ export async function GET() {
 // POST: Add a new employee
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
+        const body = await req.json(); // { id, name, role, rfidCardId, phone, email, joinDate, salary }
+        const { id, name, role, rfidCardId, phone, email, joinDate, salary } = body;
 
         // Check ID uniqueness
-        const existing = await prisma.employee.findUnique({ where: { id: body.id } });
+        const existing = await prisma.employee.findUnique({
+            where: { id }
+        });
+
         if (existing) {
             return NextResponse.json({ error: "Employee ID already exists" }, { status: 400 });
         }
 
-        const salary = body.salary ? parseFloat(body.salary) : 0;
-        if (isNaN(salary)) {
+        const numericSalary = salary ? parseFloat(salary) : 0;
+        if (isNaN(numericSalary)) {
             return NextResponse.json({ error: "Invalid Salary" }, { status: 400 });
         }
 
         const employee = await prisma.employee.create({
             data: {
-                id: body.id,
-                name: body.name,
-                role: body.role,
-                rfidCardId: body.rfidCardId || null,
-                phone: body.phone,
-                email: body.email,
-                joinDate: new Date(body.joinDate),
-                salary: salary,
+                id,
+                name,
+                role,
+                rfidCardId: rfidCardId || null,
+                phone,
+                email,
+                joinDate: new Date(joinDate),
+                salary: numericSalary,
                 status: "Active"
             }
         });
-
-        // Sync to Firebase (REMOVED)
-        // Employee data is now SQL-only.
 
         return NextResponse.json(employee);
     } catch (error: any) {
@@ -62,7 +63,6 @@ export async function DELETE(req: NextRequest) {
 
         if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-        // Get employee details first to find RFID
         const employee = await prisma.employee.findUnique({ where: { id } });
 
         if (!employee) {
@@ -72,9 +72,6 @@ export async function DELETE(req: NextRequest) {
         await prisma.employee.delete({
             where: { id }
         });
-
-        // Remove from Firebase (REMOVED)
-        // SQL only.
 
         return NextResponse.json({ success: true });
     } catch (error) {

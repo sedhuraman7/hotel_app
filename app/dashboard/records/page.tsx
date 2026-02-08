@@ -31,7 +31,7 @@ export default function RoomRecordsPage() {
                 const formatted = data.map((guest: any) => ({
                     id: guest.id,
                     guestName: guest.name,
-                    roomNumber: guest.room?.id || "N/A", // Assume room relation is included
+                    roomNumber: guest.room?.id || "N/A",
                     checkInTime: new Date(guest.checkInTime).toLocaleString(),
                     checkOutDate: guest.checkOutTime ? new Date(guest.checkOutTime).toLocaleString() : "-",
                     stayLength: guest.stayLength + " days",
@@ -138,6 +138,7 @@ export default function RoomRecordsPage() {
                 }
             } catch (error) {
                 console.error("Transfer error:", error);
+                alert("Connection failed.");
             }
         }
     };

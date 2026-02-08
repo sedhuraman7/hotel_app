@@ -14,11 +14,9 @@ export async function GET(req: NextRequest) {
 
     // Determine type
     const eventType = status === "2" ? "BLE Entry" : "BLE Exit";
-    const access = status === "2"; // Entry is "Access", Exit is just log? Or both are info?
-    // Let's mark both as "Authorized" usage, or just Info.
-    // 2=IN(True), 3=OUT(False in boolean? No. Just log it).
+    // 2=IN(True), 3=OUT(False)
 
-    console.log(`[API] BLE Event: Device=${deviceId} Tag=${tagId} Type=${eventType}`);
+    console.log(`[API] BLE Event: Device=${deviceId} Tag=${tagId} Type=${eventType} RSSI=${rssi}`);
 
     try {
         await prisma.accessLog.create({
@@ -26,14 +24,15 @@ export async function GET(req: NextRequest) {
                 deviceId: deviceId,
                 cardId: tagId, // Store BLE Tag ID in cardId column
                 type: eventType,
-                access: true, // It's a tracking event, not a denial
-                message: `BLE Tag ${tagId} ${status === "2" ? "Detected" : "Left"} (RSSI: ${rssi || 'N/A'})`
+                access: true, // It's a tracking event
+                message: `BLE Event: Tag ${tagId} ${status === "2" ? "Entered/Detected" : "Exited/Left"}. Signal: ${rssi || 'N/A'}`
             }
         });
 
         return NextResponse.json({ success: true });
     } catch (e) {
-        console.error(e);
-        return NextResponse.json({ error: "DB Error" }, { status: 500 });
+        console.error("BLE Event Log Error:", e);
+        // Even if DB fails, return 200 to ESP so it doesn't retry endlessly or panic
+        return NextResponse.json({ success: true, warning: "Log Failed" });
     }
 }
