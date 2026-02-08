@@ -16,9 +16,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export default function RoomDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function RoomDetailsPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams?: Promise<{ tab?: string }> }) {
     const { id } = use(params);
-    const [activeTab, setActiveTab] = useState("Transaction");
+    const sp = searchParams ? use(searchParams) : {};
+    const [activeTab, setActiveTab] = useState(sp.tab || "Transaction");
     const [dateRange, setDateRange] = useState({ start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] });
     const [transactions, setTransactions] = useState<any[]>([]);
     const [orders, setOrders] = useState<any[]>([]);

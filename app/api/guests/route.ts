@@ -88,7 +88,11 @@ export async function POST(req: NextRequest) {
                     </div>
                  `;
 
-                const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+                // Dynamic App URL from Request Headers (handles localhost:3001 etc)
+                const host = req.headers.get("host"); // e.g. "localhost:3001"
+                const protocol = req.headers.get("x-forwarded-proto") || "http";
+                const appUrl = `${protocol}://${host}`;
+
                 const webAppLink = `${appUrl}/guest/${guest.id}`;
 
                 const html = generateEmailHtml(`Welcome, ${name}!`, hotelName, content, wifiSsid, wifiPass, webAppLink);
@@ -113,7 +117,7 @@ export async function GET(req: NextRequest) {
                 room: true,
                 complaints: {
                     where: {
-                        status: { not: 'Resolved' }
+                        status: { notIn: ['Resolved', 'Closed'] }
                     }
                 }
             }

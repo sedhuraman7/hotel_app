@@ -191,9 +191,13 @@ export default function RoomRecordsPage() {
                                         <div className="flex items-center gap-2">
                                             {record.roomNumber}
                                             {record.activeComplaints > 0 && (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 animate-pulse border border-red-200" title={`${record.activeComplaints} Active Issue(s)`}>
+                                                <Link
+                                                    href={`/dashboard/records/${record.id}?tab=Total Complaints`}
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 animate-pulse border border-red-200 hover:bg-red-200 transition-colors cursor-pointer"
+                                                    title={`${record.activeComplaints} Active Issue(s)`}
+                                                >
                                                     <AlertTriangle className="w-3 h-3" /> {record.activeComplaints}
-                                                </span>
+                                                </Link>
                                             )}
                                         </div>
                                     </td>
