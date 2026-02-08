@@ -69,17 +69,39 @@ export async function GET(req: NextRequest) {
             whereCondition.OR = orConditions;
         }
 
-        // 3. Date Range Filter
-        if (start && end) {
-            const startDate = new Date(start);
-            const endDate = new Date(end);
-            endDate.setHours(23, 59, 59, 999);
+        // 3. Date Range Filter & Guest Stay Constraints
+        const requestStart = start ? new Date(start) : new Date(0); // Default to epoch if no start
+        const requestEnd = end ? new Date(end) : new Date();
+        requestEnd.setHours(23, 59, 59, 999);
 
-            whereCondition.timestamp = {
-                gte: startDate,
-                lte: endDate
-            };
+        let queryStart = requestStart;
+        let queryEnd = requestEnd;
+
+        // If Guest Context, Strictly limit to their Stay Duration
+        if (guestId) {
+            const guest = await prisma.guest.findUnique({
+                where: { id: guestId },
+                select: { checkInTime: true, checkOutTime: true }
+            });
+
+            if (guest) {
+                // Clamp Start: Max(RequestStart, GuestCheckIn)
+                if (guest.checkInTime > queryStart) {
+                    queryStart = guest.checkInTime;
+                }
+
+                // Clamp End: Min(RequestEnd, GuestCheckOut or Now)
+                const stayEnd = guest.checkOutTime || new Date();
+                if (stayEnd < queryEnd) {
+                    queryEnd = stayEnd;
+                }
+            }
         }
+
+        whereCondition.timestamp = {
+            gte: queryStart,
+            lte: queryEnd
+        };
 
         // 4. Execute Query
         const logs = await prisma.accessLog.findMany({

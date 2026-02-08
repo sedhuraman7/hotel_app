@@ -154,6 +154,22 @@ export default function RoomDetailsPage({ params, searchParams }: { params: Prom
                 const data = await res.json();
                 const guest = data.find((g: any) => g.id === id);
                 setGuestDetails(guest);
+
+                // Auto-set Date Range to match Guest Stay
+                if (guest && guest.checkInTime) {
+                    const checkIn = new Date(guest.checkInTime).toISOString().split('T')[0];
+                    const checkOut = guest.checkOutTime
+                        ? new Date(guest.checkOutTime).toISOString().split('T')[0]
+                        : new Date().toISOString().split('T')[0];
+
+                    setDateRange({ start: checkIn, end: checkOut });
+
+                    // Trigger Transaction Fetch if on Transaction Tab
+                    if (activeTab === "Transaction") {
+                        // We need to trigger fetch but strict mode might block.
+                        // Actually changing state 'dateRange' will trigger fetch if we add it to useEffect dependencies.
+                    }
+                }
             }
         } catch (error) {
             console.error("Error fetching guest details:", error);
@@ -184,9 +200,14 @@ export default function RoomDetailsPage({ params, searchParams }: { params: Prom
         if (activeTab === "Guest Checkin") fetchGuestDetails();
     };
 
+    // Fetch Guest Details on load to set correct date range
+    useEffect(() => {
+        if (id) fetchGuestDetails();
+    }, [id]);
+
     useEffect(() => {
         loadData();
-    }, [activeTab]);
+    }, [activeTab, dateRange]);
 
     // Poll every 5s if on tracking tabs
     useEffect(() => {
